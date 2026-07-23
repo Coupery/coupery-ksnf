@@ -1,0 +1,70 @@
+//! Crate errors.
+
+use core::fmt;
+
+/// An error returned by `coupery-ksnf`.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[non_exhaustive]
+pub enum Error {
+    /// A point encoding is malformed.
+    InvalidPoint,
+    /// A nonidentity point was required.
+    IdentityPoint,
+    /// A scalar encoding is not canonical.
+    InvalidScalar,
+    /// A group-element tag is unknown.
+    InvalidElementTag,
+    /// An identity encoding has nonzero padding.
+    InvalidIdentity,
+    /// The input ended before the requested field.
+    UnexpectedEnd {
+        /// Byte offset at the start of the field.
+        offset: usize,
+        /// Number of bytes requested.
+        needed: usize,
+    },
+    /// Bytes remain after a value was decoded.
+    TrailingBytes {
+        /// Byte offset of the first trailing byte.
+        offset: usize,
+    },
+    /// A byte string is too long for the canonical length prefix.
+    LengthOverflow,
+    /// A polynomial or support is empty.
+    EmptyInput,
+    /// Two related lists have different lengths.
+    LengthMismatch,
+    /// A Shamir node is zero.
+    ZeroNode,
+    /// A Shamir support contains a node twice.
+    DuplicateNode,
+    /// Hash-to-field rejected its fixed domain.
+    HashToField,
+}
+
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::InvalidPoint => f.write_str("invalid point"),
+            Self::IdentityPoint => f.write_str("identity point"),
+            Self::InvalidScalar => f.write_str("invalid scalar"),
+            Self::InvalidElementTag => f.write_str("invalid group-element tag"),
+            Self::InvalidIdentity => f.write_str("invalid identity encoding"),
+            Self::UnexpectedEnd { offset, needed } => {
+                write!(f, "need {needed} bytes at offset {offset}")
+            }
+            Self::TrailingBytes { offset } => write!(f, "trailing bytes at offset {offset}"),
+            Self::LengthOverflow => f.write_str("length exceeds u32"),
+            Self::EmptyInput => f.write_str("empty input"),
+            Self::LengthMismatch => f.write_str("length mismatch"),
+            Self::ZeroNode => f.write_str("zero Shamir node"),
+            Self::DuplicateNode => f.write_str("duplicate Shamir node"),
+            Self::HashToField => f.write_str("hash-to-field failed"),
+        }
+    }
+}
+
+impl std::error::Error for Error {}
+
+/// A result returned by `coupery-ksnf`.
+pub type Result<T> = core::result::Result<T, Error>;
