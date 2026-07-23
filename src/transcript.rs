@@ -10,7 +10,8 @@ use crate::shamir::Node;
 use crate::signing::{self, NoncePair};
 use crate::support::{DeviceParticipant, InnerSupport, OuterCoefficient, OuterSupport};
 use crate::types::{
-    ActivationHandle, CommandId, DeviceId, InnerEpoch, OuterEpoch, PersonId, Slot, VaultId,
+    ActivationHandle, CommandId, DeviceId, InnerEpoch, OuterEpoch, PersonId, SessionId, Slot,
+    VaultId,
 };
 use crate::{Error, Result};
 
@@ -276,6 +277,170 @@ pub struct RootEntry {
     nonce: NoncePair,
 }
 
+/// One member nonce used to finalize a root package.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct MemberNonce {
+    slot: Slot,
+    nonce: NoncePair,
+}
+
+impl MemberNonce {
+    /// Creates a member nonce.
+    #[must_use]
+    pub const fn new(slot: Slot, nonce: NoncePair) -> Self {
+        Self { slot, nonce }
+    }
+
+    /// Returns the outer slot.
+    #[must_use]
+    pub const fn slot(self) -> Slot {
+        self.slot
+    }
+
+    /// Returns the public nonce pair.
+    #[must_use]
+    pub const fn nonce(self) -> NoncePair {
+        self.nonce
+    }
+}
+
+/// A root package before nonce creation.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct RootPrepackage {
+    key: VaultKey,
+    message: Vec<u8>,
+    context: RootContext,
+    records: Vec<MemberRecord>,
+}
+
+impl RootPrepackage {
+    /// Creates a prepackage bound to an accepted outer support.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error for an empty, duplicate, or mismatched support.
+    pub fn new(
+        key: VaultKey,
+        message: Vec<u8>,
+        context: RootContext,
+        outer_support: &OuterSupport,
+        mut records: Vec<MemberRecord>,
+    ) -> Result<Self> {
+        if records.is_empty() {
+            return Err(Error::EmptyInput);
+        }
+        records.sort_unstable_by_key(|record| record.slot);
+        reject_duplicate_records(&records)?;
+        let prepackage = Self {
+            key,
+            message,
+            context,
+            records,
+        };
+        prepackage.validate_support(outer_support)?;
+        prepackage.to_bytes()?;
+        Ok(prepackage)
+    }
+
+    /// Decodes a root prepackage.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error for malformed, unsorted, or duplicate fields.
+    pub fn from_bytes(bytes: &[u8]) -> Result<Self> {
+        let mut decoder = Decoder::new(bytes);
+        expect_version(&mut decoder)?;
+        let key = VaultKey::new(decoder.get_point()?);
+        let message = decoder.get_bytes()?.to_vec();
+        decode_protocol(&mut decoder)?;
+        let context = decode_root_context(&mut decoder)?;
+        let count = usize::from(decoder.get_u16()?);
+        if count == 0 {
+            return Err(Error::EmptyInput);
+        }
+        let mut records = Vec::with_capacity(count);
+        for _ in 0..count {
+            records.push(decode_record(&mut decoder)?);
+        }
+        decoder.finish()?;
+        ensure_sorted_records(&records)?;
+        Ok(Self {
+            key,
+            message,
+            context,
+            records,
+        })
+    }
+
+    /// Returns canonical prepackage bytes.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error::LengthOverflow`] for oversized fields.
+    pub fn to_bytes(&self) -> Result<Vec<u8>> {
+        let mut encoder = Encoder::new();
+        encode_root_prefix(&mut encoder, self.key, &self.message, self.context)?;
+        encoder.put_u16(count_u16(self.records.len())?);
+        for record in &self.records {
+            encode_record(&mut encoder, *record);
+        }
+        Ok(encoder.finish())
+    }
+
+    /// Checks the records against an accepted outer support.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error::SupportMismatch`] when the supports differ.
+    pub fn validate_support(&self, support: &OuterSupport) -> Result<()> {
+        if self.records.len() != support.participants().len() {
+            return Err(Error::SupportMismatch);
+        }
+        for (record, participant) in self.records.iter().zip(support.participants()) {
+            if record.slot != participant.slot() || record.member != participant.member() {
+                return Err(Error::SupportMismatch);
+            }
+        }
+        Ok(())
+    }
+
+    /// Returns one slot's member record.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error::ParticipantNotFound`] when the slot is absent.
+    pub fn record(&self, slot: Slot) -> Result<MemberRecord> {
+        self.records
+            .binary_search_by_key(&slot, |record| record.slot)
+            .map(|index| self.records[index])
+            .map_err(|_| Error::ParticipantNotFound)
+    }
+
+    /// Returns the vault key.
+    #[must_use]
+    pub const fn key(&self) -> VaultKey {
+        self.key
+    }
+
+    /// Returns the signed message.
+    #[must_use]
+    pub fn message(&self) -> &[u8] {
+        &self.message
+    }
+
+    /// Returns the root context.
+    #[must_use]
+    pub const fn context(&self) -> RootContext {
+        self.context
+    }
+
+    /// Returns the sorted member records.
+    #[must_use]
+    pub fn records(&self) -> &[MemberRecord] {
+        &self.records
+    }
+}
+
 impl RootEntry {
     /// Creates a root entry.
     #[must_use]
@@ -316,20 +481,61 @@ impl RootPackage {
         message: Vec<u8>,
         context: RootContext,
         outer_support: &OuterSupport,
-        mut entries: Vec<RootEntry>,
+        entries: Vec<RootEntry>,
     ) -> Result<Self> {
-        if entries.is_empty() {
-            return Err(Error::EmptyInput);
+        let (records, nonces) = entries
+            .into_iter()
+            .map(|entry| {
+                (
+                    entry.record,
+                    MemberNonce::new(entry.record.slot, entry.nonce),
+                )
+            })
+            .unzip();
+        Self::finalize(
+            RootPrepackage::new(key, message, context, outer_support, records)?,
+            outer_support,
+            nonces,
+        )
+    }
+
+    /// Adds member nonces to a prepackage.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error for a duplicate, missing, or mismatched slot.
+    pub fn finalize(
+        prepackage: RootPrepackage,
+        outer_support: &OuterSupport,
+        mut nonces: Vec<MemberNonce>,
+    ) -> Result<Self> {
+        prepackage.validate_support(outer_support)?;
+        nonces.sort_unstable_by_key(|entry| entry.slot);
+        if nonces.len() != prepackage.records.len() {
+            return Err(Error::SupportMismatch);
         }
-        entries.sort_unstable_by_key(|entry| entry.record.slot);
-        reject_duplicate_slots(&entries)?;
+        for pair in nonces.windows(2) {
+            if pair[0].slot == pair[1].slot {
+                return Err(Error::DuplicateSlot);
+            }
+        }
+        let entries = prepackage
+            .records
+            .iter()
+            .zip(nonces)
+            .map(|(record, nonce)| {
+                if record.slot != nonce.slot {
+                    return Err(Error::SupportMismatch);
+                }
+                Ok(RootEntry::new(*record, nonce.nonce))
+            })
+            .collect::<Result<Vec<_>>>()?;
         let package = Self {
-            key,
-            message,
-            context,
+            key: prepackage.key,
+            message: prepackage.message,
+            context: prepackage.context,
             entries,
         };
-        package.validate_support(outer_support)?;
         package.to_bytes()?;
         Ok(package)
     }
@@ -344,15 +550,8 @@ impl RootPackage {
         expect_version(&mut decoder)?;
         let key = VaultKey::new(decoder.get_point()?);
         let message = decoder.get_bytes()?.to_vec();
-        let protocol = decoder.get_bytes()?;
-        if protocol != PROTOCOL_ID {
-            return Err(Error::ProtocolMismatch);
-        }
-        let context = RootContext::new(
-            VaultId::new(decoder.get_fixed()?),
-            OuterEpoch::new(decoder.get_u64()?),
-            CommandId::new(decoder.get_fixed()?),
-        );
+        decode_protocol(&mut decoder)?;
+        let context = decode_root_context(&mut decoder)?;
 
         let public_count = usize::from(decoder.get_u16()?);
         if public_count == 0 {
@@ -396,13 +595,7 @@ impl RootPackage {
     /// Returns [`Error::LengthOverflow`] for oversized fields.
     pub fn to_bytes(&self) -> Result<Vec<u8>> {
         let mut encoder = Encoder::new();
-        encoder.put_u8(VERSION);
-        encoder.put_point(self.key.point());
-        encoder.put_bytes(&self.message)?;
-        encoder.put_bytes(PROTOCOL_ID)?;
-        encoder.put_fixed(self.context.vault.as_bytes());
-        encoder.put_u64(self.context.epoch.get());
-        encoder.put_fixed(self.context.command.as_bytes());
+        encode_root_prefix(&mut encoder, self.key, &self.message, self.context)?;
         encoder.put_u16(count_u16(self.entries.len())?);
         for entry in &self.entries {
             encoder.put_u16(entry.record.slot.get());
@@ -470,6 +663,17 @@ impl RootPackage {
     #[must_use]
     pub fn entries(&self) -> &[RootEntry] {
         &self.entries
+    }
+
+    /// Returns the exact pre-nonce package.
+    #[must_use]
+    pub fn prepackage(&self) -> RootPrepackage {
+        RootPrepackage {
+            key: self.key,
+            message: self.message.clone(),
+            context: self.context,
+            records: self.entries.iter().map(|entry| entry.record).collect(),
+        }
     }
 
     fn binding_preimage(&self, slot: Slot) -> Result<Vec<u8>> {
@@ -541,6 +745,98 @@ impl MemberOpening {
     }
 }
 
+/// A verified private member reservation before nonce creation.
+pub struct MemberReservation {
+    prepackage: RootPrepackage,
+    opening: MemberOpening,
+}
+
+impl MemberReservation {
+    /// Verifies a prepackage and one private opening.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error for a support, epoch, handle, or commitment mismatch.
+    pub fn new(
+        prepackage: RootPrepackage,
+        opening: MemberOpening,
+        outer_support: &OuterSupport,
+    ) -> Result<Self> {
+        prepackage.validate_support(outer_support)?;
+        let body = opening.body();
+        if body.epoch.outer() != prepackage.context.epoch
+            || body.epoch.anchor().vault() != prepackage.context.vault
+        {
+            return Err(Error::InvalidTranscript);
+        }
+        if prepackage.record(body.outer.slot())? != opening.record()? {
+            return Err(Error::CommitmentMismatch);
+        }
+        Ok(Self {
+            prepackage,
+            opening,
+        })
+    }
+
+    /// Decodes exact reservation bytes.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error for malformed bytes or a transcript mismatch.
+    pub fn from_bytes(
+        bytes: &[u8],
+        outer_support: &OuterSupport,
+    ) -> Result<(Self, SessionId, u64)> {
+        let mut decoder = Decoder::new(bytes);
+        expect_version(&mut decoder)?;
+        let prepackage = RootPrepackage::from_bytes(decoder.get_bytes()?)?;
+        let slot = Slot::new(decoder.get_u16()?);
+        let opening = MemberOpening::from_bytes(decoder.get_bytes()?, outer_support)?;
+        let session = SessionId::new(decoder.get_fixed()?);
+        let expiry = decoder.get_u64()?;
+        decoder.finish()?;
+        let reservation = Self::new(prepackage, opening, outer_support)?;
+        if reservation.slot() != slot {
+            return Err(Error::InvalidTranscript);
+        }
+        Ok((reservation, session, expiry))
+    }
+
+    /// Returns exact reservation bytes.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error::LengthOverflow`] for an oversized field.
+    pub fn to_bytes(&self, session: SessionId, expiry: u64) -> Result<Zeroizing<Vec<u8>>> {
+        let mut encoder = Encoder::new();
+        encoder.put_u8(VERSION);
+        encoder.put_bytes(&self.prepackage.to_bytes()?)?;
+        encoder.put_u16(self.slot().get());
+        encoder.put_bytes(&self.opening.to_bytes()?)?;
+        encoder.put_fixed(session.as_bytes());
+        encoder.put_u64(expiry);
+        Ok(Zeroizing::new(encoder.finish()))
+    }
+
+    /// Returns the public prepackage.
+    #[must_use]
+    pub const fn prepackage(&self) -> &RootPrepackage {
+        &self.prepackage
+    }
+
+    /// Returns the private member body.
+    #[must_use]
+    pub const fn body(&self) -> &MemberBody {
+        self.opening.body()
+    }
+
+    /// Returns the selected outer slot.
+    #[must_use]
+    pub const fn slot(&self) -> Slot {
+        self.opening.body.outer.slot()
+    }
+}
+
 /// A verified root package and private member opening.
 pub struct MemberTranscript {
     root: RootPackage,
@@ -558,18 +854,23 @@ impl MemberTranscript {
         opening: MemberOpening,
         outer_support: &OuterSupport,
     ) -> Result<Self> {
-        root.validate_support(outer_support)?;
-        let body = opening.body();
-        if body.epoch.outer() != root.context.epoch
-            || body.epoch.anchor().vault() != root.context.vault
-        {
+        let reservation = MemberReservation::new(root.prepackage(), opening, outer_support)?;
+        Self::finalize(root, reservation)
+    }
+
+    /// Joins a finalized root with its exact reservation.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error::InvalidTranscript`] when the prepackage changed.
+    pub fn finalize(root: RootPackage, reservation: MemberReservation) -> Result<Self> {
+        if root.prepackage() != reservation.prepackage {
             return Err(Error::InvalidTranscript);
         }
-        let record = root.entry(body.outer.slot())?.record;
-        if record != opening.record()? {
-            return Err(Error::CommitmentMismatch);
-        }
-        Ok(Self { root, opening })
+        Ok(Self {
+            root,
+            opening: reservation.opening,
+        })
     }
 
     /// Returns the public root package.
@@ -667,6 +968,38 @@ fn count_u16(value: usize) -> Result<u16> {
     u16::try_from(value).map_err(|_| Error::LengthOverflow)
 }
 
+fn encode_root_prefix(
+    encoder: &mut Encoder,
+    key: VaultKey,
+    message: &[u8],
+    context: RootContext,
+) -> Result<()> {
+    encoder.put_u8(VERSION);
+    encoder.put_point(key.point());
+    encoder.put_bytes(message)?;
+    encoder.put_bytes(PROTOCOL_ID)?;
+    encoder.put_fixed(context.vault.as_bytes());
+    encoder.put_u64(context.epoch.get());
+    encoder.put_fixed(context.command.as_bytes());
+    Ok(())
+}
+
+fn decode_protocol(decoder: &mut Decoder<'_>) -> Result<()> {
+    if decoder.get_bytes()? == PROTOCOL_ID {
+        Ok(())
+    } else {
+        Err(Error::ProtocolMismatch)
+    }
+}
+
+fn decode_root_context(decoder: &mut Decoder<'_>) -> Result<RootContext> {
+    Ok(RootContext::new(
+        VaultId::new(decoder.get_fixed()?),
+        OuterEpoch::new(decoder.get_u64()?),
+        CommandId::new(decoder.get_fixed()?),
+    ))
+}
+
 fn encode_key_epoch(encoder: &mut Encoder, epoch: KeyEpoch) {
     encoder.put_u64(epoch.outer().get());
     encoder.put_u64(epoch.inner().get());
@@ -703,10 +1036,23 @@ fn decode_record(decoder: &mut Decoder<'_>) -> Result<MemberRecord> {
     })
 }
 
-fn reject_duplicate_slots(entries: &[RootEntry]) -> Result<()> {
-    for pair in entries.windows(2) {
-        if pair[0].record.slot == pair[1].record.slot {
+fn reject_duplicate_records(records: &[MemberRecord]) -> Result<()> {
+    for pair in records.windows(2) {
+        if pair[0].slot == pair[1].slot {
             return Err(Error::DuplicateSlot);
+        }
+    }
+    Ok(())
+}
+
+fn ensure_sorted_records(records: &[MemberRecord]) -> Result<()> {
+    for pair in records.windows(2) {
+        if pair[0].slot >= pair[1].slot {
+            return Err(if pair[0].slot == pair[1].slot {
+                Error::DuplicateSlot
+            } else {
+                Error::InvalidTranscript
+            });
         }
     }
     Ok(())

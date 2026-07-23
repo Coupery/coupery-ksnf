@@ -62,6 +62,18 @@ pub enum Error {
     NonceMismatch,
     /// A secret share differs from its public point.
     ShareMismatch,
+    /// Another session holds the device lock.
+    Busy,
+    /// The session is permanently closed.
+    Tombstoned,
+    /// The call is invalid in the current stage.
+    WrongStage,
+    /// A same-session replay changed its input.
+    ReplayMismatch,
+    /// The reservation names another key epoch.
+    EpochMismatch,
+    /// A receiver-local delivery names another receiver.
+    ReceiverMismatch,
     /// A nonce scalar is zero.
     ZeroNonce,
     /// A nonce sum is the identity.
@@ -103,6 +115,12 @@ impl fmt::Display for Error {
             Self::SupportMismatch => f.write_str("support mismatch"),
             Self::NonceMismatch => f.write_str("nonce mismatch"),
             Self::ShareMismatch => f.write_str("share mismatch"),
+            Self::Busy => f.write_str("device busy"),
+            Self::Tombstoned => f.write_str("session tombstoned"),
+            Self::WrongStage => f.write_str("wrong stage"),
+            Self::ReplayMismatch => f.write_str("altered replay"),
+            Self::EpochMismatch => f.write_str("epoch mismatch"),
+            Self::ReceiverMismatch => f.write_str("receiver mismatch"),
             Self::ZeroNonce => f.write_str("zero nonce"),
             Self::IdentityNonce => f.write_str("identity nonce"),
             Self::InvalidPartial => f.write_str("invalid partial signature"),

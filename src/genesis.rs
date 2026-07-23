@@ -370,11 +370,15 @@ impl ValidatedPublicGenesis {
         }
         let anchor = anchor_share(&member, &identity);
         drop(member);
+        let public_person = self.person(person)?;
         Ok(DeviceGenesis {
             vault: self.vault,
             person,
             device,
             node: public.node,
+            identity_key: public_person.identity_key(),
+            member_point: public_person.member_point(),
+            vault_key: self.vault_key(),
             identity,
             anchor,
         })
@@ -387,6 +391,9 @@ pub struct DeviceGenesis {
     person: PersonId,
     device: DeviceId,
     node: Node,
+    identity_key: IdentityKey,
+    member_point: MemberPoint,
+    vault_key: VaultKey,
     identity: SecretScalar,
     anchor: SecretScalar,
 }
@@ -416,6 +423,24 @@ impl DeviceGenesis {
         self.node
     }
 
+    /// Returns the stable identity key.
+    #[must_use]
+    pub const fn identity_key(&self) -> IdentityKey {
+        self.identity_key
+    }
+
+    /// Returns the vault-local member point.
+    #[must_use]
+    pub const fn member_point(&self) -> MemberPoint {
+        self.member_point
+    }
+
+    /// Returns the stable vault key.
+    #[must_use]
+    pub const fn vault_key(&self) -> VaultKey {
+        self.vault_key
+    }
+
     /// Borrows the identity share for one operation.
     pub fn with_identity<T>(&self, use_share: impl FnOnce(&crate::algebra::Scalar) -> T) -> T {
         self.identity.expose(use_share)
@@ -441,6 +466,9 @@ impl fmt::Debug for DeviceGenesis {
             .field("person", &self.person)
             .field("device", &self.device)
             .field("node", &self.node)
+            .field("identity_key", &self.identity_key)
+            .field("member_point", &self.member_point)
+            .field("vault_key", &self.vault_key)
             .field("identity", &"[REDACTED]")
             .field("anchor", &"[REDACTED]")
             .finish()
