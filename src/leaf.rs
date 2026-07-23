@@ -1,19 +1,27 @@
 //! One-use device signing state.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
 use zeroize::Zeroizing;
 
+use crate::algebra::{Element, SecretScalar};
 use crate::auth::{
     AuthenticatedAbort, AuthenticatedCommitment, AuthenticatedOpening, CommitmentView, OpeningView,
     nonce_commitment,
 };
-use crate::dealing::{ContributionPoints, InstalledShare, TargetId};
-use crate::genesis::DeviceGenesis;
-use crate::keys::KeyEpoch;
+use crate::dealing::{
+    ContributionPoints, InstalledShare, OuterTarget, SingleShape, TargetId, TargetShape,
+};
+use crate::genesis::{DeviceGenesis, DeviceGenesisParts, IdentityMap};
+use crate::keys::{
+    AnchorId, IdentityKey, KeyEpoch, MemberPoint, SharePoint, VaultKey, anchor_share, signing_share,
+};
+use crate::shamir::Node;
 use crate::signing::{DeviceNonceSet, DeviceResponse, Nonce, NoncePair, respond_device};
 use crate::transcript::{MemberReservation, MemberTranscript, RootPackage, SigningContext};
-use crate::types::SessionId;
+use crate::types::{
+    ActivationHandle, DeviceId, InnerEpoch, OuterEpoch, PersonId, SessionId, VaultId,
+};
 use crate::{Error, Result};
 
 /// A live leaf stage.
@@ -31,8 +39,15 @@ pub enum LeafStage {
 
 /// One device's global signing lock and tombstones.
 pub struct LeafRegistry {
-    device: DeviceGenesis,
-    epoch: KeyEpoch,
+    device: DeviceId,
+    person: PersonId,
+    node: Node,
+    identity_map: IdentityMap,
+    identity_key: IdentityKey,
+    identity: SecretScalar,
+    inner_epoch: InnerEpoch,
+    identity_handle: ActivationHandle,
+    vaults: BTreeMap<VaultId, VaultState>,
     live: Option<Live>,
     tombstones: BTreeSet<SessionId>,
 }
@@ -45,15 +60,91 @@ impl LeafRegistry {
     /// Returns [`Error::EpochMismatch`] when the handles name another device
     /// state.
     pub fn new(device: DeviceGenesis, epoch: KeyEpoch) -> Result<Self> {
-        if epoch.anchor().vault() != device.vault() || epoch.anchor().person() != device.person() {
-            return Err(Error::EpochMismatch);
-        }
+        let parts = device.into_parts();
+        validate_genesis_epoch(&parts, epoch)?;
+        let mut vaults = BTreeMap::new();
+        vaults.insert(
+            parts.vault,
+            VaultState {
+                outer_node: parts.outer_node,
+                outer_epoch: epoch.outer(),
+                member_handle: epoch.anchor().member(),
+                member_point: parts.member_point,
+                vault_key: parts.vault_key,
+                anchor: parts.anchor,
+            },
+        );
         Ok(Self {
-            device,
-            epoch,
+            device: parts.device,
+            person: parts.person,
+            node: parts.node,
+            identity_map: parts.identity_map,
+            identity_key: parts.identity_key,
+            identity: parts.identity,
+            inner_epoch: epoch.inner(),
+            identity_handle: epoch.anchor().identity(),
+            vaults,
             live: None,
             tombstones: BTreeSet::new(),
         })
+    }
+
+    /// Creates one device registry from all active vault states.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the list is empty or the states do not share one
+    /// device, person, roster, identity sharing, and identity epoch.
+    pub fn from_vaults(states: Vec<(DeviceGenesis, KeyEpoch)>) -> Result<Self> {
+        let mut states = states.into_iter();
+        let (device, epoch) = states.next().ok_or(Error::EmptyInput)?;
+        let mut registry = Self::new(device, epoch)?;
+        for (device, epoch) in states {
+            registry.add_vault(device, epoch)?;
+        }
+        Ok(registry)
+    }
+
+    /// Adds one vault that reuses the installed identity sharing.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error while a session is live, for a duplicate vault, or
+    /// when the device, person, roster, identity, epoch, or handle differs.
+    pub fn add_vault(&mut self, device: DeviceGenesis, epoch: KeyEpoch) -> Result<()> {
+        if self.live.is_some() {
+            return Err(Error::Busy);
+        }
+        let parts = device.into_parts();
+        validate_genesis_epoch(&parts, epoch)?;
+        let identity_public = parts
+            .identity
+            .expose(|scalar| Element::from_scalar(*scalar));
+        let installed_public = self.identity.expose(|scalar| Element::from_scalar(*scalar));
+        if parts.device != self.device
+            || parts.person != self.person
+            || parts.node != self.node
+            || parts.identity_map != self.identity_map
+            || parts.identity_key != self.identity_key
+            || identity_public != installed_public
+            || epoch.inner() != self.inner_epoch
+            || epoch.anchor().identity() != self.identity_handle
+            || self.vaults.contains_key(&parts.vault)
+        {
+            return Err(Error::EpochMismatch);
+        }
+        self.vaults.insert(
+            parts.vault,
+            VaultState {
+                outer_node: parts.outer_node,
+                outer_epoch: epoch.outer(),
+                member_handle: epoch.anchor().member(),
+                member_point: parts.member_point,
+                vault_key: parts.vault_key,
+                anchor: parts.anchor,
+            },
+        );
+        Ok(())
     }
 
     /// Reserves the device before nonce creation.
@@ -92,11 +183,11 @@ impl LeafRegistry {
                 if reservation.to_bytes(session, expiry)?.as_slice() != bytes {
                     return Err(Error::InvalidTranscript);
                 }
-                self.validate_reservation(&reservation)?;
-                Ok((reservation, expiry))
+                let vault = self.validate_reservation(&reservation)?;
+                Ok((reservation, expiry, vault))
             },
         );
-        let (reservation, expiry) = match parsed {
+        let (reservation, expiry, vault) = match parsed {
             Ok(value) => value,
             Err(error) => {
                 self.tombstones.insert(session);
@@ -105,6 +196,7 @@ impl LeafRegistry {
         };
         self.live = Some(Live {
             session,
+            vault,
             expiry,
             reservation_bytes: Zeroizing::new(bytes.to_vec()),
             reservation: Some(reservation),
@@ -142,7 +234,7 @@ impl LeafRegistry {
         let result = (|| {
             let nonce = Nonce::sample(rng);
             let pair = nonce.commitments()?;
-            let commitment = nonce_commitment(self.device.device(), reservation_bytes, pair)?;
+            let commitment = nonce_commitment(self.device, reservation_bytes, pair)?;
             Ok(CommitState {
                 nonce: Some(nonce),
                 pair,
@@ -197,13 +289,13 @@ impl LeafRegistry {
         let Some(commit) = &live.commit else {
             return self.fail(live, Error::WrongStage);
         };
-        if view.receiver() != self.device.device()
+        if view.receiver() != self.device
             || view.session() != session
             || view.reservation() != live.reservation_bytes.as_slice()
         {
             return self.fail(live, Error::InvalidTranscript);
         }
-        let own_commitment = match view.commitment(self.device.device()) {
+        let own_commitment = match view.commitment(self.device) {
             Ok(value) => value,
             Err(error) => return self.fail(live, error),
         };
@@ -257,7 +349,7 @@ impl LeafRegistry {
         let Some(reveal) = &live.reveal else {
             return self.fail(live, Error::WrongStage);
         };
-        if view.receiver() != self.device.device()
+        if view.receiver() != self.device
             || view.session() != session
             || view.reservation() != live.reservation_bytes.as_slice()
         {
@@ -296,13 +388,14 @@ impl LeafRegistry {
             }
             let transcript = MemberTranscript::finalize(root, reservation)?;
             let signing = SigningContext::new(transcript.root())?;
-            let share = self.device.signing_share();
+            let vault = self.vaults.get(&live.vault).ok_or(Error::EpochMismatch)?;
+            let share = signing_share(&self.identity, &vault.anchor);
             respond_device(
                 nonce,
                 &transcript,
                 &signing,
                 &fixed.nonces,
-                self.device.device(),
+                self.device,
                 &share,
             )
         })();
@@ -337,7 +430,7 @@ impl LeafRegistry {
     ///
     /// Returns an error for another receiver, session, reservation, or sender.
     pub fn receive_abort(&mut self, abort: &AuthenticatedAbort) -> Result<()> {
-        if abort.receiver() != self.device.device() {
+        if abort.receiver() != self.device {
             return Err(Error::ReceiverMismatch);
         }
         let live = self.take_live(abort.session())?;
@@ -409,29 +502,84 @@ impl LeafRegistry {
         identity: InstalledShare,
         member: InstalledShare,
     ) -> Result<()> {
-        let anchor = epoch.anchor();
-        if anchor.vault() != self.device.vault()
-            || anchor.person() != self.device.person()
-            || epoch.outer() != self.epoch.outer()
-            || epoch.inner() <= self.epoch.inner()
-            || anchor.identity() != identity.handle()
-            || anchor.member() != member.handle()
-            || identity.handle() != member.handle()
-            || identity.target() != TargetId::Single(self.device.device())
-            || member.target() != TargetId::Single(self.device.device())
-            || !matches!(identity.points(), ContributionPoints::Single(_))
-            || !matches!(member.points(), ContributionPoints::Single(_))
-            || identity.points().constant()?
-                != crate::algebra::Element::from(self.device.identity_key().point())
-            || member.points().constant()?
-                != crate::algebra::Element::from(self.device.member_point().point())
+        self.activate_inner_bundle(identity, vec![(epoch, member)])
+    }
+
+    /// Atomically installs one identity block and every vault member block.
+    ///
+    /// All shares must come from one terminal handle. Every active vault must
+    /// appear once. Any live session closes before the new state is visible.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error unless keys, targets, epochs, handles, and vaults
+    /// match the installed person state.
+    pub fn activate_inner_bundle(
+        &mut self,
+        identity: InstalledShare,
+        mut members: Vec<(KeyEpoch, InstalledShare)>,
+    ) -> Result<()> {
+        members.sort_unstable_by_key(|(epoch, _)| epoch.anchor().vault());
+        let handle = identity.handle();
+        let identity_shape = match identity.shape() {
+            TargetShape::Single(shape) => shape.clone(),
+            TargetShape::Outer(_) => return Err(Error::SupportMismatch),
+        };
+        let next_identity_map = identity_map(&identity_shape, identity.points())?;
+        let next_node = target_node(&identity_shape, self.device)?;
+        if members.len() != self.vaults.len()
+            || handle == self.identity_handle
+            || self
+                .vaults
+                .values()
+                .any(|vault| vault.member_handle == handle)
+            || identity.target() != TargetId::Single(self.device)
+            || next_node != self.node
+            || identity.points().constant()? != Element::from(self.identity_key.point())
         {
             return Err(Error::EpochMismatch);
         }
+
+        let mut next_inner = None;
+        for ((epoch, member), (vault_id, vault)) in members.iter().zip(&self.vaults) {
+            let anchor = epoch.anchor();
+            if anchor.vault() != *vault_id
+                || anchor.person() != self.person
+                || epoch.outer() != vault.outer_epoch
+                || epoch.inner() <= self.inner_epoch
+                || next_inner.is_some_and(|inner| inner != epoch.inner())
+                || anchor.identity() != handle
+                || anchor.member() != handle
+                || member.handle() != handle
+                || member.target() != TargetId::Single(self.device)
+                || member.shape() != identity.shape()
+                || !matches!(member.points(), ContributionPoints::Single(_))
+                || member.points().constant()? != Element::from(vault.member_point.point())
+            {
+                return Err(Error::EpochMismatch);
+            }
+            next_inner = Some(epoch.inner());
+        }
+        let next_inner = next_inner.ok_or(Error::EmptyInput)?;
+        let next_identity = identity.into_share();
+        let mut next_anchors = Vec::with_capacity(members.len());
+        for (epoch, member) in members {
+            let member = member.into_share();
+            next_anchors.push((
+                epoch.anchor().vault(),
+                anchor_share(&member, &next_identity),
+            ));
+        }
+
         self.close_live();
-        self.device
-            .replace_inner(identity.into_share(), member.into_share());
-        self.epoch = epoch;
+        self.identity = next_identity;
+        self.identity_map = next_identity_map;
+        self.inner_epoch = next_inner;
+        self.identity_handle = handle;
+        for (state, (_, anchor)) in self.vaults.values_mut().zip(next_anchors) {
+            state.anchor = anchor;
+            state.member_handle = handle;
+        }
         Ok(())
     }
 
@@ -448,54 +596,93 @@ impl LeafRegistry {
         let TargetId::Outer { person, device } = member.target() else {
             return Err(Error::ParticipantMismatch);
         };
-        if anchor.vault() != self.device.vault()
-            || anchor.person() != self.device.person()
-            || person != self.device.person()
-            || device != self.device.device()
-            || epoch.outer() <= self.epoch.outer()
-            || epoch.inner() != self.epoch.inner()
-            || anchor.identity() != self.epoch.anchor().identity()
+        let vault = self
+            .vaults
+            .get(&anchor.vault())
+            .ok_or(Error::EpochMismatch)?;
+        let TargetShape::Outer(shape) = member.shape() else {
+            return Err(Error::SupportMismatch);
+        };
+        let target = shape
+            .people()
+            .binary_search_by_key(&person, OuterTarget::person)
+            .map(|index| &shape.people()[index])
+            .map_err(|_| Error::ParticipantNotFound)?;
+        if anchor.person() != self.person
+            || person != self.person
+            || device != self.device
+            || target.node() != vault.outer_node
+            || !same_roster(&self.identity_map, target.inner())
+            || epoch.outer() <= vault.outer_epoch
+            || epoch.inner() != self.inner_epoch
+            || anchor.identity() != self.identity_handle
             || anchor.member() != member.handle()
-            || member.points().constant()?
-                != crate::algebra::Element::from(self.device.vault_key().point())
+            || member.handle() == vault.member_handle
+            || member.points().constant()? != Element::from(vault.vault_key.point())
         {
             return Err(Error::EpochMismatch);
         }
         let point = crate::algebra::Point::try_from(member.points().member_constant(person)?)?;
-        self.close_live();
-        self.device
-            .replace_member(member.into_share(), crate::keys::MemberPoint::new(point));
-        self.epoch = epoch;
+        let next_anchor = anchor_share(&member.into_share(), &self.identity);
+        self.close_vault_live(anchor.vault());
+        let vault = self
+            .vaults
+            .get_mut(&anchor.vault())
+            .ok_or(Error::EpochMismatch)?;
+        vault.outer_epoch = epoch.outer();
+        vault.member_handle = anchor.member();
+        vault.member_point = MemberPoint::new(point);
+        vault.anchor = next_anchor;
         Ok(())
     }
 
-    /// Returns the installed key epoch.
-    #[must_use]
-    pub const fn epoch(&self) -> KeyEpoch {
-        self.epoch
+    /// Returns one vault's installed key epoch.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error::ParticipantNotFound`] when the vault is absent.
+    pub fn epoch(&self, vault: VaultId) -> Result<KeyEpoch> {
+        let state = self.vaults.get(&vault).ok_or(Error::ParticipantNotFound)?;
+        Ok(KeyEpoch::new(
+            state.outer_epoch,
+            self.inner_epoch,
+            AnchorId::new(
+                vault,
+                self.person,
+                self.identity_handle,
+                state.member_handle,
+            ),
+        ))
     }
 
-    fn validate_reservation(&self, reservation: &MemberReservation) -> Result<()> {
+    /// Returns the active vault identifiers.
+    pub fn vaults(&self) -> impl Iterator<Item = VaultId> + '_ {
+        self.vaults.keys().copied()
+    }
+
+    fn validate_reservation(&self, reservation: &MemberReservation) -> Result<VaultId> {
         let body = reservation.body();
-        if body.epoch() != self.epoch {
+        let vault_id = body.epoch().anchor().vault();
+        let vault = self.vaults.get(&vault_id).ok_or(Error::EpochMismatch)?;
+        if body.epoch() != self.epoch(vault_id)? {
             return Err(Error::EpochMismatch);
         }
-        if body.identity() != self.device.identity_key()
-            || body.member() != self.device.member_point()
-            || reservation.prepackage().key() != self.device.vault_key()
+        if body.identity() != self.identity_key
+            || body.member() != vault.member_point
+            || reservation.prepackage().key() != vault.vault_key
         {
             return Err(Error::InvalidTranscript);
         }
-        let participant = body.inner_support().participant(self.device.device())?;
-        if participant.node() != self.device.node() {
+        let participant = body.inner_support().participant(self.device)?;
+        if participant.node() != self.node {
             return Err(Error::ParticipantMismatch);
         }
-        let share = self.device.signing_share();
-        let point = share.expose(|scalar| crate::algebra::Element::from_scalar(*scalar));
+        let share = signing_share(&self.identity, &vault.anchor);
+        let point = share.expose(|scalar| Element::from_scalar(*scalar));
         if point != participant.share().element() {
             return Err(Error::ShareMismatch);
         }
-        Ok(())
+        Ok(vault_id)
     }
 
     fn take_live(&mut self, session: SessionId) -> Result<Live> {
@@ -523,10 +710,17 @@ impl LeafRegistry {
             drop(live);
         }
     }
+
+    fn close_vault_live(&mut self, vault: VaultId) {
+        if self.live.as_ref().is_some_and(|live| live.vault == vault) {
+            self.close_live();
+        }
+    }
 }
 
 struct Live {
     session: SessionId,
+    vault: VaultId,
     expiry: u64,
     reservation_bytes: Zeroizing<Vec<u8>>,
     reservation: Option<MemberReservation>,
@@ -564,4 +758,65 @@ struct RevealState {
 struct FixedState {
     bytes: Zeroizing<Vec<u8>>,
     nonces: DeviceNonceSet,
+}
+
+struct VaultState {
+    outer_node: Node,
+    outer_epoch: OuterEpoch,
+    member_handle: ActivationHandle,
+    member_point: MemberPoint,
+    vault_key: VaultKey,
+    anchor: SecretScalar,
+}
+
+fn validate_genesis_epoch(parts: &DeviceGenesisParts, epoch: KeyEpoch) -> Result<()> {
+    if epoch.anchor().vault() == parts.vault && epoch.anchor().person() == parts.person {
+        Ok(())
+    } else {
+        Err(Error::EpochMismatch)
+    }
+}
+
+fn identity_map(shape: &SingleShape, points: &ContributionPoints) -> Result<IdentityMap> {
+    let ContributionPoints::Single(commitments) = points else {
+        return Err(Error::SupportMismatch);
+    };
+    if commitments.len() != usize::from(shape.threshold()) {
+        return Err(Error::SupportMismatch);
+    }
+    let target_shape = TargetShape::Single(shape.clone());
+    let devices = shape
+        .devices()
+        .iter()
+        .map(|target| {
+            let device = target.device();
+            Ok((
+                device,
+                target.node(),
+                SharePoint::new(points.evaluate(&target_shape, TargetId::Single(device))?),
+            ))
+        })
+        .collect::<Result<Vec<_>>>()?;
+    Ok(IdentityMap {
+        commitments: commitments.clone(),
+        devices,
+    })
+}
+
+fn same_roster(map: &IdentityMap, shape: &SingleShape) -> bool {
+    map.commitments.len() == usize::from(shape.threshold())
+        && map.devices.len() == shape.devices().len()
+        && map
+            .devices
+            .iter()
+            .zip(shape.devices())
+            .all(|((device, node, _), target)| *device == target.device() && *node == target.node())
+}
+
+fn target_node(shape: &SingleShape, device: DeviceId) -> Result<Node> {
+    shape
+        .devices()
+        .binary_search_by_key(&device, |target| target.device())
+        .map(|index| shape.devices()[index].node())
+        .map_err(|_| Error::ParticipantNotFound)
 }

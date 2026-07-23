@@ -375,7 +375,16 @@ impl ValidatedPublicGenesis {
             vault: self.vault,
             person,
             device,
+            outer_node: public_person.outer_node,
             node: public.node,
+            identity_map: IdentityMap {
+                commitments: public_person.identity.commitments.clone(),
+                devices: public_person
+                    .devices
+                    .iter()
+                    .map(|device| (device.device, device.node, device.identity_share))
+                    .collect(),
+            },
             identity_key: public_person.identity_key(),
             member_point: public_person.member_point(),
             vault_key: self.vault_key(),
@@ -390,7 +399,9 @@ pub struct DeviceGenesis {
     vault: VaultId,
     person: PersonId,
     device: DeviceId,
+    outer_node: Node,
     node: Node,
+    identity_map: IdentityMap,
     identity_key: IdentityKey,
     member_point: MemberPoint,
     vault_key: VaultKey,
@@ -415,6 +426,12 @@ impl DeviceGenesis {
     #[must_use]
     pub const fn device(&self) -> DeviceId {
         self.device
+    }
+
+    /// Returns the person's outer Shamir node.
+    #[must_use]
+    pub const fn outer_node(&self) -> Node {
+        self.outer_node
     }
 
     /// Returns the Shamir node.
@@ -457,17 +474,41 @@ impl DeviceGenesis {
         signing_share(&self.identity, &self.anchor)
     }
 
-    pub(crate) fn replace_inner(&mut self, identity: SecretScalar, member: SecretScalar) {
-        self.anchor = anchor_share(&member, &identity);
-        self.identity = identity;
-        drop(member);
+    pub(crate) fn into_parts(self) -> DeviceGenesisParts {
+        DeviceGenesisParts {
+            vault: self.vault,
+            person: self.person,
+            device: self.device,
+            outer_node: self.outer_node,
+            node: self.node,
+            identity_map: self.identity_map,
+            identity_key: self.identity_key,
+            member_point: self.member_point,
+            vault_key: self.vault_key,
+            identity: self.identity,
+            anchor: self.anchor,
+        }
     }
+}
 
-    pub(crate) fn replace_member(&mut self, member: SecretScalar, point: MemberPoint) {
-        self.anchor = anchor_share(&member, &self.identity);
-        self.member_point = point;
-        drop(member);
-    }
+pub(crate) struct DeviceGenesisParts {
+    pub(crate) vault: VaultId,
+    pub(crate) person: PersonId,
+    pub(crate) device: DeviceId,
+    pub(crate) outer_node: Node,
+    pub(crate) node: Node,
+    pub(crate) identity_map: IdentityMap,
+    pub(crate) identity_key: IdentityKey,
+    pub(crate) member_point: MemberPoint,
+    pub(crate) vault_key: VaultKey,
+    pub(crate) identity: SecretScalar,
+    pub(crate) anchor: SecretScalar,
+}
+
+#[derive(Eq, PartialEq)]
+pub(crate) struct IdentityMap {
+    pub(crate) commitments: Vec<Element>,
+    pub(crate) devices: Vec<(DeviceId, Node, SharePoint)>,
 }
 
 impl fmt::Debug for DeviceGenesis {
@@ -477,7 +518,9 @@ impl fmt::Debug for DeviceGenesis {
             .field("vault", &self.vault)
             .field("person", &self.person)
             .field("device", &self.device)
+            .field("outer_node", &self.outer_node)
             .field("node", &self.node)
+            .field("identity_map", &"[REDACTED]")
             .field("identity_key", &self.identity_key)
             .field("member_point", &self.member_point)
             .field("vault_key", &self.vault_key)

@@ -236,6 +236,13 @@ impl ExposureLedger {
         if self.candidate_exists(command) {
             return Err(Error::ReplayMismatch);
         }
+        let people = targets
+            .iter()
+            .map(TargetGroup::person)
+            .collect::<BTreeSet<_>>();
+        if people.len() != targets.len() {
+            return Err(Error::DuplicateParticipant);
+        }
         let controlled = targets
             .iter()
             .filter(|target| self.corrupt_count(target) >= usize::from(target.threshold))

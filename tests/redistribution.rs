@@ -7,9 +7,9 @@ use rand_core::SeedableRng as _;
 
 use coupery_ksnf::algebra::{Element, Point, Scalar, SecretScalar};
 use coupery_ksnf::dealing::{
-    Candidate, CandidateView, Command, Contribution, InstalledShare, Opening, OuterShape,
-    OuterTarget, PrivateShare, RoleSpec, SingleShape, TargetAccumulator, TargetDevice, TargetId,
-    TargetShape,
+    Candidate, CandidateView, Command, Contribution, ContributionPoints, InstalledShare, Opening,
+    OuterShape, OuterTarget, PrivateShare, RoleSpec, SingleShape, TargetAccumulator, TargetDevice,
+    TargetId, TargetShape,
 };
 use coupery_ksnf::keys::{MemberPoint, SharePoint};
 use coupery_ksnf::log_act::{LogAct, MemoryLog, Terminal};
@@ -303,15 +303,22 @@ fn execute(
     contributions: &[Contribution],
     log: &mut MemoryLog,
 ) -> Result<(Terminal, Vec<InstalledShare>, CandidateView)> {
+    command.verify_bytes(&command.to_bytes()?)?;
     let mut candidate = Candidate::new(command.clone(), log)?;
     for contribution in contributions {
         candidate.commit(contribution.role(), contribution.commitment(), log)?;
     }
     candidate.close_commitments(log)?;
     for contribution in contributions {
-        candidate.open(contribution.opening(), log)?;
+        let opening = contribution.opening();
+        assert_eq!(Opening::from_bytes(&opening.to_bytes()?)?, opening);
+        candidate.open(opening, log)?;
     }
     let view = candidate.close_openings(log)?;
+    assert_eq!(
+        ContributionPoints::from_bytes(&view.aggregate().to_bytes()?)?,
+        *view.aggregate()
+    );
     candidate.commit(contributions[0].role(), contributions[0].commitment(), log)?;
     candidate.open(contributions[0].opening(), log)?;
 
@@ -322,6 +329,10 @@ fn execute(
             accumulator.receive(contribution.share(command, target)?)?;
         }
         let (receipt, share) = accumulator.finish()?.into_parts();
+        assert_eq!(
+            coupery_ksnf::dealing::TargetReceipt::from_bytes(&receipt.to_bytes()?)?,
+            receipt
+        );
         candidate.receipt(receipt.clone(), log)?;
         candidate.receipt(receipt, log)?;
         pending.push(share);

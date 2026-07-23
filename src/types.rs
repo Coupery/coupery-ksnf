@@ -47,7 +47,7 @@ id_type!(
     SessionId
 );
 id_type!(
-    /// A redistribution command identifier.
+    /// A command or signing ceremony identifier.
     CommandId
 );
 id_type!(

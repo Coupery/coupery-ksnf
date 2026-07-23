@@ -2,7 +2,7 @@
 
 use k256::ProjectivePoint;
 
-use coupery_ksnf::algebra::{Point, Scalar, SecretScalar};
+use coupery_ksnf::algebra::{Element, Point, Scalar, SecretScalar};
 use coupery_ksnf::keys::{AnchorId, IdentityKey, KeyEpoch, MemberPoint, SharePoint, VaultKey};
 use coupery_ksnf::shamir::Node;
 use coupery_ksnf::signing::{
@@ -41,8 +41,8 @@ fn depth_two_signature_hides_inner_state_and_verifies() -> Result<()> {
         PersonParticipant::new(person_1, Slot::new(1), Node::from_u64(1)?, member_1),
     ])?;
 
-    let share_11 = Scalar::from(127_u64);
-    let share_12 = Scalar::from(136_u64);
+    let share_11 = Scalar::ZERO;
+    let share_12 = -member_1_secret;
     let share_21 = Scalar::from(146_u64);
     let share_22 = Scalar::from(157_u64);
     let inner_1 = inner_support(device_11, share_11, device_12, share_12)?;
@@ -209,12 +209,12 @@ fn inner_support(
         DeviceParticipant::new(
             device_2,
             Node::from_u64(2)?,
-            SharePoint::new(Point::from_scalar(share_2)?),
+            SharePoint::new(Element::from_scalar(share_2)),
         ),
         DeviceParticipant::new(
             device_1,
             Node::from_u64(1)?,
-            SharePoint::new(Point::from_scalar(share_1)?),
+            SharePoint::new(Element::from_scalar(share_1)),
         ),
     ])
 }

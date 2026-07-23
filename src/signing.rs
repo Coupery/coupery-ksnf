@@ -470,8 +470,8 @@ pub fn respond_device(
 ) -> Result<DeviceResponse> {
     validate_member_inputs(transcript, signing, nonces)?;
     let participant = transcript.body().inner_support().participant(device)?;
-    let public_share = share.expose(|scalar| Point::from_scalar(*scalar))?;
-    if participant.share().element() != Element::from(public_share) {
+    let public_share = share.expose(|scalar| Element::from_scalar(*scalar));
+    if participant.share().element() != public_share {
         return Err(Error::ShareMismatch);
     }
     if nonce.commitments()? != nonces.nonce(device)? {

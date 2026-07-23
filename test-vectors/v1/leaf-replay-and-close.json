@@ -1,0 +1,89 @@
+{
+  "case": "leaf-replay-and-close",
+  "commitment": "efaba562fd9ed6e3d58d44a92ab18a1f430ba632b85b5f9cfdef04e2605dfda2",
+  "format": "coupery-ksnf-v1",
+  "nonce_pair": {
+    "binding": "02c0074c804ae3af2f203020e64e529376886384ce0203402753e5bf77fdd4a87a",
+    "hiding": "0235311ed2f953d38179fab3fd84b1bab6c021c9c54f4d9c5f0772f7fedc6c6acc"
+  },
+  "reservation": "01000000d10102311091dd9860e8e20ee13473c1155f5f69635e394704eaa74009452246cfa9b30000000b6c65616620766563746f720000000f636f75706572792d6b736e662f76315252525252525252525252525252525252525252525252525252525252525252000000000000000892929292929292929292929292929292929292929292929292929292929292920001000102311091dd9860e8e20ee13473c1155f5f69635e394704eaa74009452246cfa9b385dd2bd6e0037f80b1373a7a44ac3d414a802db79f79b8a4be719eadeb6fb40d0001000001be0100000000000000000000000000000000000000000000000000000000000000290000019901026a245bf6dc698504c89a20cfded60853152b695336c28063b61c65cbd269e6b402311091dd9860e8e20ee13473c1155f5f69635e394704eaa74009452246cfa9b30000000000000008000000000000000952525252525252525252525252525252525252525252525252525252525252526161616161616161616161616161616161616161616161616161616161616161818181818181818181818181818181818181818181818181818181818181818191919191919191919191919191919191919191919191919191919191919191910001717171717171717171717171717171717171717171717171717171717171717100000000000000000000000000000000000000000000000000000000000000010102311091dd9860e8e20ee13473c1155f5f69635e394704eaa74009452246cfa9b30000000000000000000000000000000000000000000000000000000000000001616161616161616161616161616161616161616161616161616161616161616100010000000000000000000000000000000000000000000000000000000000000001a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a20000000000000064",
+  "response": "017171717171717171717171717171717171717171717171717171717171717171475819b325ac054b16ce11ba833f0df67a7eb896db35834434d04e6f10604981",
+  "terminal_cases": [
+    {
+      "case": "abort before commit",
+      "result": "ok",
+      "tombstoned": true
+    },
+    {
+      "case": "abort after commit",
+      "result": "ok",
+      "tombstoned": true
+    },
+    {
+      "case": "timeout",
+      "result": "ok",
+      "tombstoned": true
+    },
+    {
+      "case": "authenticated sibling abort",
+      "result": "ok",
+      "tombstoned": true
+    },
+    {
+      "case": "altered same-session replay",
+      "result": "replay_mismatch",
+      "tombstoned": true
+    }
+  ],
+  "test_only_secret": {
+    "commit_rng_seed": "0707070707070707070707070707070707070707070707070707070707070707",
+    "replay_rng_seed_unused": "0808080808080808080808080808080808080808080808080808080808080808"
+  },
+  "trace": [
+    {
+      "call": "reserve",
+      "result": "ok",
+      "state": "reserved"
+    },
+    {
+      "call": "reserve exact replay",
+      "result": "ok",
+      "state": "reserved"
+    },
+    {
+      "call": "commit",
+      "result": "ok",
+      "state": "committed"
+    },
+    {
+      "call": "commit exact replay",
+      "result": "ok",
+      "state": "committed"
+    },
+    {
+      "call": "fresh session while live",
+      "result": "busy",
+      "state": "committed"
+    },
+    {
+      "call": "reveal and exact replay",
+      "result": "ok",
+      "state": "held"
+    },
+    {
+      "call": "fix and exact replay",
+      "result": "ok",
+      "state": "fixed"
+    },
+    {
+      "call": "respond",
+      "result": "ok",
+      "state": "closed"
+    },
+    {
+      "call": "post-close call",
+      "result": "tombstoned",
+      "state": "closed"
+    }
+  ]
+}

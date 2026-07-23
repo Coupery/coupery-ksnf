@@ -1,5 +1,8 @@
 //! Canonical signing transcripts.
 
+use core::fmt;
+
+use k256::elliptic_curve::Field as _;
 use zeroize::Zeroizing;
 
 use crate::algebra::{Scalar, SecretScalar};
@@ -21,13 +24,19 @@ const VERSION: u8 = 1;
 pub const PROTOCOL_ID: &[u8] = b"coupery-ksnf/v1";
 
 /// A private member commitment body.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Eq, PartialEq)]
 pub struct MemberBody {
     identity: IdentityKey,
     member: MemberPoint,
     epoch: KeyEpoch,
     inner: InnerSupport,
     outer: OuterCoefficient,
+}
+
+impl fmt::Debug for MemberBody {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str("MemberBody([REDACTED])")
+    }
 }
 
 impl MemberBody {
@@ -237,17 +246,17 @@ impl MemberRecord {
 pub struct RootContext {
     vault: VaultId,
     epoch: OuterEpoch,
-    command: CommandId,
+    ceremony: CommandId,
 }
 
 impl RootContext {
     /// Creates a root context.
     #[must_use]
-    pub const fn new(vault: VaultId, epoch: OuterEpoch, command: CommandId) -> Self {
+    pub const fn new(vault: VaultId, epoch: OuterEpoch, ceremony: CommandId) -> Self {
         Self {
             vault,
             epoch,
-            command,
+            ceremony,
         }
     }
 
@@ -265,8 +274,8 @@ impl RootContext {
 
     /// Returns the ceremony identifier.
     #[must_use]
-    pub const fn command(self) -> CommandId {
-        self.command
+    pub const fn ceremony(self) -> CommandId {
+        self.ceremony
     }
 }
 
@@ -696,10 +705,24 @@ pub struct MemberOpening {
 }
 
 impl MemberOpening {
-    /// Creates a private member opening.
+    /// Creates an opening with a supplied salt.
+    ///
+    /// Use [`Self::sample`] for live sessions.
     #[must_use]
     pub const fn new(salt: SecretScalar, body: MemberBody) -> Self {
         Self { salt, body }
+    }
+
+    /// Samples a fresh commitment salt.
+    #[must_use]
+    pub fn sample(
+        body: MemberBody,
+        rng: &mut (impl rand_core::CryptoRng + rand_core::RngCore),
+    ) -> Self {
+        Self {
+            salt: SecretScalar::new(Scalar::random(rng)),
+            body,
+        }
     }
 
     /// Decodes a private member opening.
@@ -980,7 +1003,7 @@ fn encode_root_prefix(
     encoder.put_bytes(PROTOCOL_ID)?;
     encoder.put_fixed(context.vault.as_bytes());
     encoder.put_u64(context.epoch.get());
-    encoder.put_fixed(context.command.as_bytes());
+    encoder.put_fixed(context.ceremony.as_bytes());
     Ok(())
 }
 

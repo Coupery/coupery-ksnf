@@ -94,6 +94,54 @@ pub enum Error {
     HashToField,
 }
 
+impl Error {
+    /// Returns a stable error code.
+    #[must_use]
+    pub const fn code(self) -> &'static str {
+        match self {
+            Self::UnsupportedVersion => "unsupported_version",
+            Self::ProtocolMismatch => "protocol_mismatch",
+            Self::InvalidPoint => "invalid_point",
+            Self::IdentityPoint => "identity_point",
+            Self::InvalidScalar => "invalid_scalar",
+            Self::InvalidElementTag => "invalid_element_tag",
+            Self::InvalidIdentity => "invalid_identity",
+            Self::UnexpectedEnd { .. } => "unexpected_end",
+            Self::TrailingBytes { .. } => "trailing_bytes",
+            Self::LengthOverflow => "length_overflow",
+            Self::EmptyInput => "empty_input",
+            Self::LengthMismatch => "length_mismatch",
+            Self::ZeroNode => "zero_node",
+            Self::DuplicateNode => "duplicate_node",
+            Self::DuplicateParticipant => "duplicate_participant",
+            Self::DuplicateSlot => "duplicate_slot",
+            Self::ParticipantNotFound => "participant_not_found",
+            Self::ParticipantMismatch => "participant_mismatch",
+            Self::InvalidTranscript => "invalid_transcript",
+            Self::CommitmentMismatch => "commitment_mismatch",
+            Self::CoefficientMismatch => "coefficient_mismatch",
+            Self::SupportMismatch => "support_mismatch",
+            Self::NonceMismatch => "nonce_mismatch",
+            Self::ShareMismatch => "share_mismatch",
+            Self::Busy => "busy",
+            Self::Tombstoned => "tombstoned",
+            Self::WrongStage => "wrong_stage",
+            Self::ReplayMismatch => "replay_mismatch",
+            Self::EpochMismatch => "epoch_mismatch",
+            Self::ReceiverMismatch => "receiver_mismatch",
+            Self::CommandMismatch => "command_mismatch",
+            Self::StalePredecessor => "stale_predecessor",
+            Self::PhaseClosed => "phase_closed",
+            Self::AlreadyTerminal => "already_terminal",
+            Self::ZeroNonce => "zero_nonce",
+            Self::IdentityNonce => "identity_nonce",
+            Self::InvalidPartial => "invalid_partial",
+            Self::InvalidSignature => "invalid_signature",
+            Self::HashToField => "hash_to_field",
+        }
+    }
+}
+
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {

@@ -1,6 +1,6 @@
 # KSNF v1 profile
 
-The paper is group-generic. This crate fixes one byte profile.
+The paper is group-generic. Version 1 fixes one byte profile.
 
 ## Group
 
@@ -10,19 +10,161 @@ The paper is group-generic. This crate fixes one byte profile.
 - Element: one tag byte followed by 33 bytes. `00 || 0^33` is the identity.
   `01 || point` is a nonidentity point.
 
-The tagged element form is used for coefficient commitments and device share
-points, which may be zero. Keys and nonces use `Point`.
+Coefficient commitments and device share points use `Element`; either may be
+zero. Keys and nonce points use `Point`.
 
 ## Fields
 
-Integers are big-endian. Variable byte strings have a big-endian `u32` length.
+| Field | Encoding |
+|---|---|
+| Version | `u8`, value `1` |
+| Identifier or activation handle | 32 fixed bytes |
+| Slot or collection count | big-endian `u16` |
+| Byte string | big-endian `u32` length, then bytes |
+| Epoch or expiry | big-endian `u64` |
+| Scalar | 32 bytes |
+| Point | 33 bytes |
+| Element | 34 bytes |
+
+Structured protocol objects start with version `1`. The plain Schnorr
+signature is the exception: `R_compressed || z`, 65 bytes, with no version
+byte. A device response is `1 || device_id || z`, 65 bytes. A member response
+is `1 || slot || z`, 35 bytes.
+
 Maps and sets sort by their encoded keys and reject duplicates. Decoders reject
-unknown tags, noncanonical scalars, trailing bytes, and alternate identity
-encodings.
+unknown versions, unknown tags, noncanonical scalars, alternate identity
+encodings, truncated input, and trailing bytes. Numeric epochs label state;
+activation handles identify it.
+
+Root packages bind the protocol identifier `coupery-ksnf/v1`.
+
+## Objects
+
+This grammar is normative. `bytes(x)` is the `u32` length of `x` followed by
+`x`. `point`, `element`, and `scalar` use the forms above. `v` is the version
+byte. `*` repeats the prior term by the preceding count.
+
+```text
+key_epoch =
+    u64(outer_epoch) || u64(inner_epoch) || vault_id || person_id
+    || identity_handle || member_handle
+
+device_row =
+    device_id || scalar(node) || element(share) || scalar(inner_coefficient)
+
+member_body =
+    v || point(identity_key) || point(member_point) || key_epoch
+    || u16(device_count) || device_row*
+    || person_id || u16(slot) || scalar(outer_coefficient)
+
+record = u16(slot) || point(member_point) || scalar(commitment)
+member_record = v || record
+
+root_prefix =
+    v || point(vault_key) || bytes(message) || bytes("coupery-ksnf/v1")
+    || vault_id || u64(outer_epoch) || ceremony_id
+
+root_prepackage = root_prefix || u16(record_count) || record*
+
+root_entry =
+    u16(slot) || point(member_point) || point(hiding_nonce)
+    || point(binding_nonce)
+
+root_package =
+    root_prefix || u16(entry_count) || root_entry*
+    || u16(record_count) || record*
+
+member_opening = v || scalar(salt) || bytes(member_body)
+
+member_reservation =
+    v || bytes(root_prepackage) || u16(slot) || bytes(member_opening)
+    || session_id || u64(expiry)
+
+device_response = v || device_id || scalar(response)
+member_response = v || u16(slot) || scalar(response)
+signature = point(aggregate_nonce) || scalar(response)
+```
+
+`root_package` requires equal entry and record counts. Rows use ascending
+device identifiers. Records and entries use ascending slots. The outer row in
+`member_body` must match the accepted outer support. All support coefficients
+are encoded and then recomputed by the decoder.
+
+### Redistribution
+
+```text
+target_id =
+    00 || device_id
+  | 01 || person_id || device_id
+
+single_shape =
+    u16(threshold) || u16(device_count)
+    || (device_id || scalar(node))*
+
+target_shape =
+    00 || single_shape
+  | 01 || u16(outer_threshold) || u16(person_count)
+       || (person_id || scalar(outer_node) || single_shape)*
+
+role_id =
+    00 || source_device_id
+  | 01 || refresher_device_id
+
+role_row =
+    role_id || element(required_constant) || element(source_share)
+    || scalar(source_weight)
+
+command =
+    v || scope_id || command_id || predecessor_handle || point(anchor)
+    || target_shape || u16(role_count) || role_row*
+
+point_vector = u16(point_count) || element(coefficient)*
+
+contribution_points =
+    v || 00 || point_vector
+  | v || 01 || point_vector || u16(member_count)
+      || (person_id || point_vector)*
+
+opening = v || role_id || bytes(contribution_points) || scalar(salt)
+
+candidate_view =
+    v || bytes(command) || u16(commitment_count)
+    || (role_id || scalar(commitment))*
+    || u16(opening_count) || bytes(opening)*
+
+target_receipt = v || command_id || target_id || bytes(candidate_view)
+```
+
+For a refresher, `source_share` is the identity element and `source_weight` is
+zero. Source rows carry the accepted share point and its support-derived
+weight. Outer people, devices, and roles are sorted by identifier. Outer
+member point vectors use the same person order as the target shape.
+
+### Receiver-local views
+
+These bytes support replay checks. The authenticated transport must also bind
+the message kind.
+
+```text
+view_prefix =
+    v || receiver_device_id || session_id || bytes(member_reservation)
+    || u16(sender_count)
+
+commitment_view =
+    view_prefix || (sender_device_id || scalar(commitment))*
+
+opening_view =
+    view_prefix || (sender_device_id || point(hiding_nonce)
+    || point(binding_nonce))*
+```
+
+Senders use ascending device identifiers. Each receiver may hold a different
+valid view.
 
 ## Hashes
 
-Each hash uses SHA-256 XMD hash-to-field with one domain:
+Hashes use RFC 9380 `hash_to_field` with SHA-256 `ExpandMsgXmd`, one
+secp256k1 scalar output, and one fixed domain string:
 
 ```text
 KSNF/v1/deal
@@ -32,6 +174,34 @@ KSNF/v1/bind
 KSNF/v1/challenge
 ```
 
-Commitments, binding factors, and challenges are canonical scalar encodings.
-This profile does not apply x-only normalization, nonce negation, or a Taproot
-tweak.
+Commitments, binding factors, and challenges use the scalar's canonical
+32-byte encoding. [`tests/primitives.rs`](tests/primitives.rs) fixes one output
+for every domain.
+
+Their preimages are:
+
+```text
+deal =
+    v || bytes("deal") || bytes(command) || role_id
+    || bytes(contribution_points) || scalar(salt)
+
+member = v || bytes("member") || scalar(salt) || bytes(member_body)
+
+nonce =
+    v || bytes("nonce") || device_id || bytes(member_reservation)
+    || point(hiding_nonce) || point(binding_nonce)
+
+bind = v || bytes(root_package) || u16(zero_based_entry_index)
+
+challenge =
+    v || point(aggregate_nonce) || point(vault_key) || bytes(message)
+```
+
+## Boundary
+
+Version 1 uses plain Schnorr. It does not apply x-only encoding, even-Y key or
+nonce normalization, nonce negation, or a Taproot tweak. Such a transform
+needs its own proof and vector version.
+
+The JSON files under [`test-vectors/`](test-vectors/) annotate canonical
+bytes. JSON itself is not protocol syntax.

@@ -1,8 +1,8 @@
 #![allow(missing_docs)]
 
-use coupery_ksnf::Result;
 use coupery_ksnf::exposure::{ExposureLedger, ExposureViolation, MemberBlockSpec, TargetGroup};
 use coupery_ksnf::types::{BlockId, CommandId, DeviceId, OuterEpoch, PersonId, VaultId};
+use coupery_ksnf::{Error, Result};
 
 #[test]
 fn audit_uses_control_state_at_first_source_exposure() -> Result<()> {
@@ -39,7 +39,7 @@ fn audit_uses_control_state_at_first_source_exposure() -> Result<()> {
         outer,
         2,
         &[
-            controlled_target,
+            controlled_target.clone(),
             TargetGroup::new(person_2, 2, vec![corrupt_1, corrupt_2])?,
         ],
     )?;
@@ -64,5 +64,13 @@ fn audit_uses_control_state_at_first_source_exposure() -> Result<()> {
         controlled: 2,
         limit: 1,
     }));
+    assert_eq!(
+        ledger.expose_outer_candidate(
+            CommandId::new([0x64; 32]),
+            2,
+            &[controlled_target.clone(), controlled_target],
+        ),
+        Err(Error::DuplicateParticipant)
+    );
     Ok(())
 }
