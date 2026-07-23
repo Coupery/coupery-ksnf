@@ -28,13 +28,13 @@ fn supports_sort_and_derive_coefficients() -> Result<(), Error> {
             person_b,
             Slot::new(2),
             Node::from_u64(2)?,
-            MemberPoint::new(share_b.point()),
+            MemberPoint::new(Point::try_from(share_b.element())?),
         ),
         PersonParticipant::new(
             person_a,
             Slot::new(1),
             Node::from_u64(1)?,
-            MemberPoint::new(share_a.point()),
+            MemberPoint::new(Point::try_from(share_a.element())?),
         ),
     ])?;
     assert_eq!(outer.participants()[0].person(), person_a);
@@ -63,7 +63,7 @@ fn supports_reject_duplicate_ids_slots_and_nodes() -> Result<(), Error> {
         Err(Error::DuplicateNode)
     );
 
-    let member = MemberPoint::new(share.point());
+    let member = MemberPoint::new(Point::try_from(share.element())?);
     assert_eq!(
         OuterSupport::new(vec![
             PersonParticipant::new(PersonId::new([1; 32]), Slot::new(1), node, member),

@@ -5,8 +5,10 @@ use std::collections::BTreeSet;
 use zeroize::Zeroizing;
 
 use crate::auth::{
-    AuthenticatedCommitment, AuthenticatedOpening, CommitmentView, OpeningView, nonce_commitment,
+    AuthenticatedAbort, AuthenticatedCommitment, AuthenticatedOpening, CommitmentView, OpeningView,
+    nonce_commitment,
 };
+use crate::dealing::{ContributionPoints, InstalledShare, TargetId};
 use crate::genesis::DeviceGenesis;
 use crate::keys::KeyEpoch;
 use crate::signing::{DeviceNonceSet, DeviceResponse, Nonce, NoncePair, respond_device};
@@ -329,6 +331,38 @@ impl LeafRegistry {
         Ok(())
     }
 
+    /// Applies one authenticated sibling abort.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error for another receiver, session, reservation, or sender.
+    pub fn receive_abort(&mut self, abort: &AuthenticatedAbort) -> Result<()> {
+        if abort.receiver() != self.device.device() {
+            return Err(Error::ReceiverMismatch);
+        }
+        let live = self.take_live(abort.session())?;
+        let valid = live.reservation.as_ref().map_or_else(
+            || Err(Error::WrongStage),
+            |reservation| {
+                reservation
+                    .body()
+                    .inner_support()
+                    .participant(abort.sender())?;
+                if live.reservation_bytes.as_slice() == abort.reservation() {
+                    Ok(())
+                } else {
+                    Err(Error::InvalidTranscript)
+                }
+            },
+        );
+        if let Err(error) = valid {
+            return self.fail(live, error);
+        }
+        self.tombstones.insert(live.session);
+        drop(live);
+        Ok(())
+    }
+
     /// Closes an expired live session.
     #[must_use]
     pub fn close_expired(&mut self, now: u64) -> Option<SessionId> {
@@ -361,6 +395,86 @@ impl LeafRegistry {
         self.tombstones.contains(&session)
     }
 
+    /// Atomically installs new identity and member blocks.
+    ///
+    /// Any live old-epoch session is closed before the new state becomes
+    /// visible.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error unless keys, targets, epochs, and handles match.
+    pub fn activate_inner(
+        &mut self,
+        epoch: KeyEpoch,
+        identity: InstalledShare,
+        member: InstalledShare,
+    ) -> Result<()> {
+        let anchor = epoch.anchor();
+        if anchor.vault() != self.device.vault()
+            || anchor.person() != self.device.person()
+            || epoch.outer() != self.epoch.outer()
+            || epoch.inner() <= self.epoch.inner()
+            || anchor.identity() != identity.handle()
+            || anchor.member() != member.handle()
+            || identity.handle() != member.handle()
+            || identity.target() != TargetId::Single(self.device.device())
+            || member.target() != TargetId::Single(self.device.device())
+            || !matches!(identity.points(), ContributionPoints::Single(_))
+            || !matches!(member.points(), ContributionPoints::Single(_))
+            || identity.points().constant()?
+                != crate::algebra::Element::from(self.device.identity_key().point())
+            || member.points().constant()?
+                != crate::algebra::Element::from(self.device.member_point().point())
+        {
+            return Err(Error::EpochMismatch);
+        }
+        self.close_live();
+        self.device
+            .replace_inner(identity.into_share(), member.into_share());
+        self.epoch = epoch;
+        Ok(())
+    }
+
+    /// Atomically installs one member block from an outer redistribution.
+    ///
+    /// Any live old-epoch session is closed before the new state becomes
+    /// visible.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error unless keys, target, epoch, and handles match.
+    pub fn activate_outer(&mut self, epoch: KeyEpoch, member: InstalledShare) -> Result<()> {
+        let anchor = epoch.anchor();
+        let TargetId::Outer { person, device } = member.target() else {
+            return Err(Error::ParticipantMismatch);
+        };
+        if anchor.vault() != self.device.vault()
+            || anchor.person() != self.device.person()
+            || person != self.device.person()
+            || device != self.device.device()
+            || epoch.outer() <= self.epoch.outer()
+            || epoch.inner() != self.epoch.inner()
+            || anchor.identity() != self.epoch.anchor().identity()
+            || anchor.member() != member.handle()
+            || member.points().constant()?
+                != crate::algebra::Element::from(self.device.vault_key().point())
+        {
+            return Err(Error::EpochMismatch);
+        }
+        let point = crate::algebra::Point::try_from(member.points().member_constant(person)?)?;
+        self.close_live();
+        self.device
+            .replace_member(member.into_share(), crate::keys::MemberPoint::new(point));
+        self.epoch = epoch;
+        Ok(())
+    }
+
+    /// Returns the installed key epoch.
+    #[must_use]
+    pub const fn epoch(&self) -> KeyEpoch {
+        self.epoch
+    }
+
     fn validate_reservation(&self, reservation: &MemberReservation) -> Result<()> {
         let body = reservation.body();
         if body.epoch() != self.epoch {
@@ -377,8 +491,8 @@ impl LeafRegistry {
             return Err(Error::ParticipantMismatch);
         }
         let share = self.device.signing_share();
-        let point = share.expose(|scalar| crate::algebra::Point::from_scalar(*scalar))?;
-        if point != participant.share().point() {
+        let point = share.expose(|scalar| crate::algebra::Element::from_scalar(*scalar));
+        if point != participant.share().element() {
             return Err(Error::ShareMismatch);
         }
         Ok(())
@@ -401,6 +515,13 @@ impl LeafRegistry {
         self.tombstones.insert(live.session);
         drop(live);
         Err(error)
+    }
+
+    fn close_live(&mut self) {
+        if let Some(live) = self.live.take() {
+            self.tombstones.insert(live.session);
+            drop(live);
+        }
     }
 }
 

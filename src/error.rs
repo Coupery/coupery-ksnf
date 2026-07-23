@@ -74,6 +74,14 @@ pub enum Error {
     EpochMismatch,
     /// A receiver-local delivery names another receiver.
     ReceiverMismatch,
+    /// A command identifier already names different bytes.
+    CommandMismatch,
+    /// The activation predecessor is stale.
+    StalePredecessor,
+    /// A transcript phase is not open.
+    PhaseClosed,
+    /// A transcript already has a terminal decision.
+    AlreadyTerminal,
     /// A nonce scalar is zero.
     ZeroNonce,
     /// A nonce sum is the identity.
@@ -121,6 +129,10 @@ impl fmt::Display for Error {
             Self::ReplayMismatch => f.write_str("altered replay"),
             Self::EpochMismatch => f.write_str("epoch mismatch"),
             Self::ReceiverMismatch => f.write_str("receiver mismatch"),
+            Self::CommandMismatch => f.write_str("command mismatch"),
+            Self::StalePredecessor => f.write_str("stale predecessor"),
+            Self::PhaseClosed => f.write_str("phase closed"),
+            Self::AlreadyTerminal => f.write_str("transcript already terminal"),
             Self::ZeroNonce => f.write_str("zero nonce"),
             Self::IdentityNonce => f.write_str("identity nonce"),
             Self::InvalidPartial => f.write_str("invalid partial signature"),

@@ -80,7 +80,7 @@ impl MemberBody {
             participants.push(DeviceParticipant::new(
                 DeviceId::new(decoder.get_fixed()?),
                 Node::new(decoder.get_scalar()?)?,
-                SharePoint::new(decoder.get_point()?),
+                SharePoint::new(decoder.get_element()?),
             ));
             encoded_coefficients.push(decoder.get_scalar()?);
         }
@@ -123,7 +123,7 @@ impl MemberBody {
         for participant in self.inner.participants() {
             encoder.put_fixed(participant.device().as_bytes());
             encoder.put_scalar(&participant.node().scalar());
-            encoder.put_point(participant.share().point());
+            encoder.put_element(participant.share().element());
             encoder.put_scalar(&self.inner.coefficient(participant.device())?.scalar());
         }
         encoder.put_fixed(self.outer.person().as_bytes());

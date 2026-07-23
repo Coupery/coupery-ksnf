@@ -5,12 +5,15 @@
 
 pub mod algebra;
 pub mod auth;
+pub mod dealing;
 pub mod encoding;
 pub mod error;
+pub mod exposure;
 pub mod genesis;
 pub mod hash;
 pub mod keys;
 pub mod leaf;
+pub mod log_act;
 pub mod shamir;
 pub mod signing;
 pub mod support;

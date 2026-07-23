@@ -10,8 +10,8 @@ The paper is group-generic. This crate fixes one byte profile.
 - Element: one tag byte followed by 33 bytes. `00 || 0^33` is the identity.
   `01 || point` is a nonidentity point.
 
-The tagged element form is used where the protocol permits zero coefficient
-commitments. Keys, share points, and nonces use `Point`.
+The tagged element form is used for coefficient commitments and device share
+points, which may be zero. Keys and nonces use `Point`.
 
 ## Fields
 

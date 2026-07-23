@@ -120,6 +120,27 @@ pub struct OuterCoefficient {
     scalar: Scalar,
 }
 
+/// A source role's coefficient in one accepted support.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct SourceWeight {
+    device: DeviceId,
+    scalar: Scalar,
+}
+
+impl SourceWeight {
+    /// Returns the source device.
+    #[must_use]
+    pub const fn device(self) -> DeviceId {
+        self.device
+    }
+
+    /// Returns the source coefficient.
+    #[must_use]
+    pub const fn scalar(self) -> Scalar {
+        self.scalar
+    }
+}
+
 impl OuterCoefficient {
     /// Returns the person identifier.
     #[must_use]
@@ -279,6 +300,38 @@ impl OuterSupport {
             .binary_search_by_key(&slot, |participant| participant.slot)
             .map(|index| self.participants[index])
             .map_err(|_| Error::ParticipantNotFound)
+    }
+
+    /// Derives one device's composed outer and inner source coefficient.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error::ParticipantNotFound`] when either participant is
+    /// absent.
+    pub fn source_weight(
+        &self,
+        person: PersonId,
+        inner: &InnerSupport,
+        device: DeviceId,
+    ) -> Result<SourceWeight> {
+        Ok(SourceWeight {
+            device,
+            scalar: self.coefficient(person)?.scalar() * inner.coefficient(device)?.scalar(),
+        })
+    }
+}
+
+impl InnerSupport {
+    /// Derives one device's inner source coefficient.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error::ParticipantNotFound`] when the device is absent.
+    pub fn source_weight(&self, device: DeviceId) -> Result<SourceWeight> {
+        Ok(SourceWeight {
+            device,
+            scalar: self.coefficient(device)?.scalar(),
+        })
     }
 }
 

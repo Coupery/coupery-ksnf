@@ -54,6 +54,14 @@ id_type!(
     /// An exact installed-transcript handle.
     ActivationHandle
 );
+id_type!(
+    /// An independently activated state scope.
+    ScopeId
+);
+id_type!(
+    /// One installed sharing in the exposure ledger.
+    BlockId
+);
 
 /// An outer sharing epoch.
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]

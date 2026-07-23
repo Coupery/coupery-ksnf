@@ -71,6 +71,46 @@ fn genesis_checks_public_polynomials_and_attached_shares() -> Result<()> {
     Ok(())
 }
 
+#[test]
+fn zero_device_shares_are_valid() -> Result<()> {
+    let vault = VaultId::new([0x56; 32]);
+    let person = PersonId::new([0xa3; 32]);
+    let device = DeviceId::new([0x13; 32]);
+    let sibling = DeviceId::new([0x14; 32]);
+    let public_person = PublicPerson::new(
+        person,
+        Node::from_u64(1)?,
+        public_polynomial_scalar(5, -Scalar::from(5_u64))?,
+        public_polynomial_scalar(7, -Scalar::from(7_u64))?,
+        vec![
+            PublicDevice::new(
+                device,
+                Node::from_u64(1)?,
+                SharePoint::new(Element::IDENTITY),
+                SharePoint::new(Element::IDENTITY),
+            ),
+            PublicDevice::new(
+                sibling,
+                Node::from_u64(2)?,
+                SharePoint::new(Element::from_scalar(-Scalar::from(5_u64))),
+                SharePoint::new(Element::from_scalar(-Scalar::from(7_u64))),
+            ),
+        ],
+    )?;
+    let genesis = ValidatedPublicGenesis::from_parts(
+        vault,
+        PublicPolynomial::new(vec![Element::from_scalar(Scalar::from(7_u64))])?,
+        vec![public_person],
+    )?;
+    genesis.attach_share(
+        person,
+        device,
+        SecretScalar::new(Scalar::ZERO),
+        SecretScalar::new(Scalar::ZERO),
+    )?;
+    Ok(())
+}
+
 fn public_person(
     person: PersonId,
     outer_node: u64,
@@ -101,8 +141,12 @@ fn public_person(
 }
 
 fn public_polynomial(constant: u64, linear: u64) -> Result<PublicPolynomial> {
+    public_polynomial_scalar(constant, Scalar::from(linear))
+}
+
+fn public_polynomial_scalar(constant: u64, linear: Scalar) -> Result<PublicPolynomial> {
     PublicPolynomial::new(vec![
         Element::from_scalar(Scalar::from(constant)),
-        Element::from_scalar(Scalar::from(linear)),
+        Element::from_scalar(linear),
     ])
 }

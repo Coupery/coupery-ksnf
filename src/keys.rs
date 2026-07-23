@@ -45,10 +45,24 @@ point_type!(
     /// A stable vault verification key.
     VaultKey
 );
-point_type!(
-    /// A public point for one device share.
-    SharePoint
-);
+
+/// A public group element for one device share.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct SharePoint(Element);
+
+impl SharePoint {
+    /// Wraps a device share element.
+    #[must_use]
+    pub fn new(element: impl Into<Element>) -> Self {
+        Self(element.into())
+    }
+
+    /// Returns the element.
+    #[must_use]
+    pub const fn element(self) -> Element {
+        self.0
+    }
+}
 
 /// The installed blocks that define one person's signing state.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -154,5 +168,5 @@ pub fn signing_share(identity: &SecretScalar, anchor: &SecretScalar) -> SecretSc
 /// Checks the affine relation between public share points.
 #[must_use]
 pub fn verify_anchor(identity: SharePoint, anchor: Element, member: SharePoint) -> bool {
-    Element::from(identity.point()) + anchor == Element::from(member.point())
+    identity.element() + anchor == member.element()
 }

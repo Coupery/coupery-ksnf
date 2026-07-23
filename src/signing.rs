@@ -423,8 +423,7 @@ pub fn verify_device(
     share: SharePoint,
 ) -> Result<()> {
     let left = Element::from_scalar(response);
-    let right =
-        nonce.bind(binding_factor) + Element::from(share.point()) * (challenge * coefficient);
+    let right = nonce.bind(binding_factor) + share.element() * (challenge * coefficient);
     if left == right {
         Ok(())
     } else {
@@ -472,7 +471,7 @@ pub fn respond_device(
     validate_member_inputs(transcript, signing, nonces)?;
     let participant = transcript.body().inner_support().participant(device)?;
     let public_share = share.expose(|scalar| Point::from_scalar(*scalar))?;
-    if participant.share().point() != public_share {
+    if participant.share().element() != Element::from(public_share) {
         return Err(Error::ShareMismatch);
     }
     if nonce.commitments()? != nonces.nonce(device)? {

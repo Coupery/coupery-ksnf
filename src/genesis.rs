@@ -62,7 +62,7 @@ impl PublicPolynomial {
     /// Checks one public share.
     #[must_use]
     pub fn verifies(&self, node: Node, share: SharePoint) -> bool {
-        self.evaluate(node) == Element::from(share.point())
+        self.evaluate(node) == share.element()
     }
 }
 
@@ -363,8 +363,8 @@ impl ValidatedPublicGenesis {
         member: SecretScalar,
     ) -> Result<DeviceGenesis> {
         let public = self.person(person)?.device(device)?;
-        if secret_point(&identity)? != public.identity_share.point()
-            || secret_point(&member)? != public.member_share.point()
+        if secret_element(&identity) != public.identity_share.element()
+            || secret_element(&member) != public.member_share.element()
         {
             return Err(Error::ShareMismatch);
         }
@@ -456,6 +456,18 @@ impl DeviceGenesis {
     pub fn signing_share(&self) -> SecretScalar {
         signing_share(&self.identity, &self.anchor)
     }
+
+    pub(crate) fn replace_inner(&mut self, identity: SecretScalar, member: SecretScalar) {
+        self.anchor = anchor_share(&member, &identity);
+        self.identity = identity;
+        drop(member);
+    }
+
+    pub(crate) fn replace_member(&mut self, member: SecretScalar, point: MemberPoint) {
+        self.anchor = anchor_share(&member, &self.identity);
+        self.member_point = point;
+        drop(member);
+    }
 }
 
 impl fmt::Debug for DeviceGenesis {
@@ -475,6 +487,6 @@ impl fmt::Debug for DeviceGenesis {
     }
 }
 
-fn secret_point(secret: &SecretScalar) -> Result<Point> {
-    secret.expose(|scalar| Point::from_scalar(*scalar))
+fn secret_element(secret: &SecretScalar) -> Element {
+    secret.expose(|scalar| Element::from_scalar(*scalar))
 }

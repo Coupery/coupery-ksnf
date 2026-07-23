@@ -97,6 +97,69 @@ pub struct AuthenticatedOpening {
     nonce: NoncePair,
 }
 
+/// One authenticated sibling abort.
+#[derive(Clone, Eq, PartialEq)]
+pub struct AuthenticatedAbort {
+    sender: DeviceId,
+    receiver: DeviceId,
+    session: SessionId,
+    reservation: Zeroizing<Vec<u8>>,
+}
+
+impl AuthenticatedAbort {
+    /// Creates an abort after channel authentication.
+    #[must_use]
+    pub fn new(
+        sender: DeviceId,
+        receiver: DeviceId,
+        session: SessionId,
+        reservation: &[u8],
+    ) -> Self {
+        Self {
+            sender,
+            receiver,
+            session,
+            reservation: Zeroizing::new(reservation.to_vec()),
+        }
+    }
+
+    /// Returns the sender.
+    #[must_use]
+    pub const fn sender(&self) -> DeviceId {
+        self.sender
+    }
+
+    /// Returns the receiver.
+    #[must_use]
+    pub const fn receiver(&self) -> DeviceId {
+        self.receiver
+    }
+
+    /// Returns the session.
+    #[must_use]
+    pub const fn session(&self) -> SessionId {
+        self.session
+    }
+
+    /// Returns the exact reservation bytes.
+    #[must_use]
+    pub fn reservation(&self) -> &[u8] {
+        &self.reservation
+    }
+}
+
+impl fmt::Debug for AuthenticatedAbort {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("AuthenticatedAbort")
+            .field("sender", &self.sender)
+            .field("receiver", &self.receiver)
+            .field("session", &self.session)
+            .field("reservation", &"[REDACTED]")
+            .finish()
+    }
+}
+
 impl AuthenticatedOpening {
     /// Creates a delivery after channel authentication.
     #[must_use]

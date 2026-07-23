@@ -4,7 +4,7 @@ use rand_chacha::ChaCha20Rng;
 use rand_core::SeedableRng as _;
 
 use coupery_ksnf::algebra::{Element, Point, Scalar, SecretScalar};
-use coupery_ksnf::auth::{AuthenticatedCommitment, AuthenticatedOpening};
+use coupery_ksnf::auth::{AuthenticatedAbort, AuthenticatedCommitment, AuthenticatedOpening};
 use coupery_ksnf::genesis::{PublicDevice, PublicPerson, PublicPolynomial, ValidatedPublicGenesis};
 use coupery_ksnf::keys::{AnchorId, KeyEpoch, SharePoint};
 use coupery_ksnf::leaf::{LeafRegistry, LeafStage};
@@ -208,6 +208,23 @@ fn leaf_closes_on_abort_expiry_and_invalid_input() -> Result<()> {
         .reserve(expired.session, &expired.reservation, &expired.outer)?;
     assert_eq!(expired.leaf.close_expired(999), Some(expired.session));
     assert!(expired.leaf.is_tombstoned(expired.session));
+    Ok(())
+}
+
+#[test]
+fn authenticated_sibling_abort_closes_its_receiver() -> Result<()> {
+    let mut fixture = fixture(7)?;
+    fixture
+        .leaf
+        .reserve(fixture.session, &fixture.reservation, &fixture.outer)?;
+    fixture.leaf.receive_abort(&AuthenticatedAbort::new(
+        fixture.device,
+        fixture.device,
+        fixture.session,
+        &fixture.reservation,
+    ))?;
+    assert_eq!(fixture.leaf.stage(), None);
+    assert!(fixture.leaf.is_tombstoned(fixture.session));
     Ok(())
 }
 
