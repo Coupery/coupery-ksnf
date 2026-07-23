@@ -6,6 +6,10 @@ use core::fmt;
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 #[non_exhaustive]
 pub enum Error {
+    /// An encoded object uses an unsupported version.
+    UnsupportedVersion,
+    /// An encoded object names another protocol.
+    ProtocolMismatch,
     /// A point encoding is malformed.
     InvalidPoint,
     /// A nonidentity point was required.
@@ -38,6 +42,34 @@ pub enum Error {
     ZeroNode,
     /// A Shamir support contains a node twice.
     DuplicateNode,
+    /// A support contains a participant twice.
+    DuplicateParticipant,
+    /// An outer package contains a slot twice.
+    DuplicateSlot,
+    /// A requested participant is absent.
+    ParticipantNotFound,
+    /// Related values name different participants.
+    ParticipantMismatch,
+    /// A transcript fails a structural check.
+    InvalidTranscript,
+    /// A private member opening does not match its commitment.
+    CommitmentMismatch,
+    /// An encoded coefficient differs from the accepted support.
+    CoefficientMismatch,
+    /// A package differs from the accepted support.
+    SupportMismatch,
+    /// A nonce differs from the fixed commitment.
+    NonceMismatch,
+    /// A secret share differs from its public point.
+    ShareMismatch,
+    /// A nonce scalar is zero.
+    ZeroNonce,
+    /// A nonce sum is the identity.
+    IdentityNonce,
+    /// A partial signature is invalid.
+    InvalidPartial,
+    /// A final signature is invalid.
+    InvalidSignature,
     /// Hash-to-field rejected its fixed domain.
     HashToField,
 }
@@ -45,6 +77,8 @@ pub enum Error {
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Self::UnsupportedVersion => f.write_str("unsupported version"),
+            Self::ProtocolMismatch => f.write_str("protocol mismatch"),
             Self::InvalidPoint => f.write_str("invalid point"),
             Self::IdentityPoint => f.write_str("identity point"),
             Self::InvalidScalar => f.write_str("invalid scalar"),
@@ -59,6 +93,20 @@ impl fmt::Display for Error {
             Self::LengthMismatch => f.write_str("length mismatch"),
             Self::ZeroNode => f.write_str("zero Shamir node"),
             Self::DuplicateNode => f.write_str("duplicate Shamir node"),
+            Self::DuplicateParticipant => f.write_str("duplicate participant"),
+            Self::DuplicateSlot => f.write_str("duplicate slot"),
+            Self::ParticipantNotFound => f.write_str("participant not found"),
+            Self::ParticipantMismatch => f.write_str("participant mismatch"),
+            Self::InvalidTranscript => f.write_str("invalid transcript"),
+            Self::CommitmentMismatch => f.write_str("member commitment mismatch"),
+            Self::CoefficientMismatch => f.write_str("coefficient mismatch"),
+            Self::SupportMismatch => f.write_str("support mismatch"),
+            Self::NonceMismatch => f.write_str("nonce mismatch"),
+            Self::ShareMismatch => f.write_str("share mismatch"),
+            Self::ZeroNonce => f.write_str("zero nonce"),
+            Self::IdentityNonce => f.write_str("identity nonce"),
+            Self::InvalidPartial => f.write_str("invalid partial signature"),
+            Self::InvalidSignature => f.write_str("invalid signature"),
             Self::HashToField => f.write_str("hash-to-field failed"),
         }
     }

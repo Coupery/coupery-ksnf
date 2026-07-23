@@ -33,6 +33,11 @@ impl Encoder {
         self.bytes.extend_from_slice(&value.to_be_bytes());
     }
 
+    /// Appends a big-endian `u64`.
+    pub fn put_u64(&mut self, value: u64) {
+        self.bytes.extend_from_slice(&value.to_be_bytes());
+    }
+
     /// Appends a fixed-size field.
     pub fn put_fixed<const N: usize>(&mut self, value: &[u8; N]) {
         self.bytes.extend_from_slice(value);
@@ -99,6 +104,11 @@ impl<'a> Decoder<'a> {
     /// Reads a big-endian `u32`.
     pub fn get_u32(&mut self) -> Result<u32> {
         Ok(u32::from_be_bytes(self.read()?))
+    }
+
+    /// Reads a big-endian `u64`.
+    pub fn get_u64(&mut self) -> Result<u64> {
+        Ok(u64::from_be_bytes(self.read()?))
     }
 
     /// Reads a fixed-size field.
