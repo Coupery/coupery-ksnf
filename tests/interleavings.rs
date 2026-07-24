@@ -1,4 +1,6 @@
-#![allow(missing_docs)]
+//! Receiver-interleaving tests.
+
+#![cfg(feature = "secp256k1")]
 
 use rand_chacha::ChaCha20Rng;
 use rand_core::SeedableRng as _;
@@ -16,45 +18,49 @@ use coupery_ksnf::transcript::{
     RootPackage, RootPrepackage, SigningContext,
 };
 use coupery_ksnf::types::{
-    ActivationHandle, CommandId, DeviceId, InnerEpoch, OuterEpoch, PersonId, SessionId, VaultId,
+    ActivationHandle, CommandId, DeviceId, InnerEpoch, LeafAttempt, OuterEpoch, PersonId,
+    SessionId, VaultId,
 };
 
 #[test]
 fn receivers_fix_commitment_views_on_their_own_schedule() -> Result<()> {
     let mut fixture = fixture()?;
-    fixture
-        .leaf_1
-        .reserve(fixture.session, &fixture.reservation, &fixture.outer)?;
-    fixture
-        .leaf_2
-        .reserve(fixture.session, &fixture.reservation, &fixture.outer)?;
+    let attempt_1 =
+        fixture
+            .leaf_1
+            .reserve(fixture.session, 0, &fixture.reservation, &fixture.outer)?;
+    let attempt_2 =
+        fixture
+            .leaf_2
+            .reserve(fixture.session, 0, &fixture.reservation, &fixture.outer)?;
+    let attempts = [attempt_1, attempt_2];
     let mut rng_1 = ChaCha20Rng::from_seed([1; 32]);
     let mut rng_2 = ChaCha20Rng::from_seed([2; 32]);
     let commitment_1 = fixture
         .leaf_1
-        .commit(fixture.session, &fixture.reservation, &mut rng_1)?;
+        .commit(attempt_1, &fixture.reservation, &mut rng_1)?;
     let commitment_2 = fixture
         .leaf_2
-        .commit(fixture.session, &fixture.reservation, &mut rng_2)?;
+        .commit(attempt_2, &fixture.reservation, &mut rng_2)?;
 
     let pair_1 = fixture.leaf_1.reveal(
-        fixture.session,
-        commitments(&fixture, fixture.device_1, commitment_1, commitment_2),
+        attempt_1,
+        commitments(&fixture, attempts, attempt_1, commitment_1, commitment_2),
     )?;
     assert_eq!(fixture.leaf_1.stage(), Some(LeafStage::Held));
     assert_eq!(fixture.leaf_2.stage(), Some(LeafStage::Committed));
 
     let pair_2 = fixture.leaf_2.reveal(
-        fixture.session,
-        commitments(&fixture, fixture.device_2, commitment_1, commitment_2),
+        attempt_2,
+        commitments(&fixture, attempts, attempt_2, commitment_1, commitment_2),
     )?;
     let aggregate_1 = fixture.leaf_1.fix(
-        fixture.session,
-        openings(&fixture, fixture.device_1, &pair_1, &pair_2),
+        attempt_1,
+        openings(&fixture, attempts, attempt_1, &pair_1, &pair_2),
     )?;
     let aggregate_2 = fixture.leaf_2.fix(
-        fixture.session,
-        openings(&fixture, fixture.device_2, &pair_1, &pair_2),
+        attempt_2,
+        openings(&fixture, attempts, attempt_2, &pair_1, &pair_2),
     )?;
     assert_eq!(aggregate_1, aggregate_2);
 
@@ -66,8 +72,8 @@ fn receivers_fix_commitment_views_on_their_own_schedule() -> Result<()> {
     )?;
     let signing = SigningContext::new(&root)?;
     let root_bytes = root.to_bytes()?;
-    let response_1 = fixture.leaf_1.respond(fixture.session, &root_bytes)?;
-    let response_2 = fixture.leaf_2.respond(fixture.session, &root_bytes)?;
+    let response_1 = fixture.leaf_1.respond(attempt_1, &root_bytes)?;
+    let response_2 = fixture.leaf_2.respond(attempt_2, &root_bytes)?;
     Signature::new(signing.nonce(), response_1.scalar() + response_2.scalar())
         .verify(root.key(), root.message())?;
     Ok(())
@@ -80,8 +86,6 @@ struct Fixture {
     reservation: zeroize::Zeroizing<Vec<u8>>,
     prepackage: RootPrepackage,
     outer: coupery_ksnf::support::OuterSupport,
-    device_1: DeviceId,
-    device_2: DeviceId,
 }
 
 fn fixture() -> Result<Fixture> {
@@ -102,7 +106,7 @@ fn fixture() -> Result<Fixture> {
         ],
     )?;
     let genesis =
-        ValidatedPublicGenesis::from_parts(vault, public_polynomial(101, 0)?, vec![public_person])?;
+        ValidatedPublicGenesis::validate(vault, public_polynomial(101, 0)?, vec![public_person])?;
     let outer = genesis.outer_support(&[person])?;
     let inner = genesis.inner_support(person, &[device_1, device_2])?;
     let state_1 = genesis.attach_share(
@@ -154,27 +158,26 @@ fn fixture() -> Result<Fixture> {
         reservation,
         prepackage,
         outer,
-        device_1,
-        device_2,
     })
 }
 
 fn commitments(
     fixture: &Fixture,
-    receiver: DeviceId,
+    attempts: [LeafAttempt; 2],
+    receiver: LeafAttempt,
     commitment_1: Scalar,
     commitment_2: Scalar,
 ) -> Vec<AuthenticatedCommitment> {
     vec![
         AuthenticatedCommitment::new(
-            fixture.device_2,
+            attempts[1],
             receiver,
             fixture.session,
             &fixture.reservation,
             commitment_2,
         ),
         AuthenticatedCommitment::new(
-            fixture.device_1,
+            attempts[0],
             receiver,
             fixture.session,
             &fixture.reservation,
@@ -185,20 +188,21 @@ fn commitments(
 
 fn openings(
     fixture: &Fixture,
-    receiver: DeviceId,
+    attempts: [LeafAttempt; 2],
+    receiver: LeafAttempt,
     pair_1: &coupery_ksnf::signing::NoncePair,
     pair_2: &coupery_ksnf::signing::NoncePair,
 ) -> Vec<AuthenticatedOpening> {
     vec![
         AuthenticatedOpening::new(
-            fixture.device_2,
+            attempts[1],
             receiver,
             fixture.session,
             &fixture.reservation,
             *pair_2,
         ),
         AuthenticatedOpening::new(
-            fixture.device_1,
+            attempts[0],
             receiver,
             fixture.session,
             &fixture.reservation,

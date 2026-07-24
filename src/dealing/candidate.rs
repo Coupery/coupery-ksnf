@@ -1,38 +1,39 @@
 use std::collections::{BTreeMap, BTreeSet};
 
-use crate::algebra::{Element, Scalar};
+use crate::algebra::{Element, ScalarFor};
 use crate::encoding::Encoder;
 use crate::log_act::{LogAct, LogPhase, Terminal};
+use crate::profile::{DefaultProfile, Profile};
 use crate::types::CommandId;
 use crate::{Error, Result};
 
 use super::contribution::aggregate_points;
 use super::{
-    CandidateView, Command, Opening, RoleId, TargetId, TargetReceipt, TargetShape, VERSION,
-    count_u16,
+    CandidateView, Command, Contribution, Opening, ReleasedContribution, RoleId, TargetId,
+    TargetReceipt, TargetShape, count_u16,
 };
 
 /// One independent redistribution transcript.
 ///
 /// Inner changes use [`InnerBundle`].
-pub struct Candidate {
-    command: Command,
-    commitments: BTreeMap<RoleId, Scalar>,
+pub struct Candidate<P: Profile = DefaultProfile> {
+    command: Command<P>,
+    commitments: BTreeMap<RoleId, ScalarFor<P>>,
     commit_closed: bool,
-    openings: BTreeMap<RoleId, Opening>,
-    receipts: BTreeMap<TargetId, TargetReceipt>,
-    view: Option<CandidateView>,
+    openings: BTreeMap<RoleId, Opening<P>>,
+    receipts: BTreeMap<TargetId, TargetReceipt<P>>,
+    view: Option<CandidateView<P>>,
     terminal: Option<Terminal>,
     stage: CandidateStage,
 }
 
-impl Candidate {
+impl<P: Profile> Candidate<P> {
     /// Starts one transcript in `log`.
     ///
     /// # Errors
     ///
     /// Returns an error for an invalid command replay or stale predecessor.
-    pub fn new(command: Command, log: &mut impl LogAct) -> Result<Self> {
+    pub fn new(command: Command<P>, log: &mut impl LogAct) -> Result<Self> {
         log.begin(
             command.scope,
             command.command,
@@ -61,7 +62,7 @@ impl Candidate {
     pub fn commit(
         &mut self,
         role: RoleId,
-        commitment: Scalar,
+        commitment: ScalarFor<P>,
         log: &mut impl LogAct,
     ) -> Result<()> {
         if let Some(existing) = self.commitments.get(&role) {
@@ -74,12 +75,12 @@ impl Candidate {
         if self.stage != CandidateStage::Commit || self.command.role(role).is_err() {
             return self.abort_with(log, Error::WrongStage);
         }
-        let mut encoder = Encoder::new();
+        let mut encoder = Encoder::<P>::for_profile();
         encoder.put_scalar(&commitment);
         if let Err(error) = log.post(
             self.command.command,
             LogPhase::Commit,
-            &role.bytes(),
+            &role.bytes::<P>(),
             &encoder.finish(),
         ) {
             return self.abort_with(log, error);
@@ -125,7 +126,7 @@ impl Candidate {
     /// # Errors
     ///
     /// Returns an error and aborts for an invalid opening or altered replay.
-    pub fn open(&mut self, opening: Opening, log: &mut impl LogAct) -> Result<()> {
+    pub fn open(&mut self, opening: Opening<P>, log: &mut impl LogAct) -> Result<()> {
         let role = opening.role;
         if let Some(existing) = self.openings.get(&role) {
             return if existing == &opening {
@@ -163,11 +164,30 @@ impl Candidate {
             Ok(value) => value,
             Err(error) => return self.abort_with(log, error),
         };
-        if let Err(error) = log.post(self.command.command, LogPhase::Open, &role.bytes(), &bytes) {
+        if let Err(error) = log.post(
+            self.command.command,
+            LogPhase::Open,
+            &role.bytes::<P>(),
+            &bytes,
+        ) {
             return self.abort_with(log, error);
         }
         self.openings.insert(role, opening);
         Ok(())
+    }
+
+    /// Posts one local contribution and permits its private deliveries.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error and aborts for a stale predecessor or invalid opening.
+    pub fn open_contribution<'a>(
+        &mut self,
+        contribution: &'a Contribution<P>,
+        log: &mut impl LogAct,
+    ) -> Result<ReleasedContribution<'a, P>> {
+        self.open(contribution.opening(), log)?;
+        Ok(ReleasedContribution::new(contribution))
     }
 
     /// Closes the opening phase and returns the common target view.
@@ -175,7 +195,7 @@ impl Candidate {
     /// # Errors
     ///
     /// Returns an error and aborts when a role is missing.
-    pub fn close_openings(&mut self, log: &mut impl LogAct) -> Result<CandidateView> {
+    pub fn close_openings(&mut self, log: &mut impl LogAct) -> Result<CandidateView<P>> {
         if let Some(view) = &self.view {
             return Ok(view.clone());
         }
@@ -208,7 +228,7 @@ impl Candidate {
     /// # Errors
     ///
     /// Returns an error and aborts for a changed command, view, or target.
-    pub fn receipt(&mut self, receipt: TargetReceipt, log: &mut impl LogAct) -> Result<()> {
+    pub fn receipt(&mut self, receipt: TargetReceipt<P>, log: &mut impl LogAct) -> Result<()> {
         if let Some(existing) = self.receipts.get(&receipt.target) {
             return if existing == &receipt {
                 Ok(())
@@ -232,7 +252,7 @@ impl Candidate {
             Ok(value) => value,
             Err(error) => return self.abort_with(log, error),
         };
-        let mut role = Encoder::new();
+        let mut role = Encoder::<P>::for_profile();
         receipt.target.encode(&mut role);
         if let Err(error) = log.post(
             self.command.command,
@@ -290,7 +310,7 @@ impl Candidate {
 
     /// Returns the immutable command.
     #[must_use]
-    pub const fn command(&self) -> &Command {
+    pub const fn command(&self) -> &Command<P> {
         &self.command
     }
 
@@ -310,7 +330,7 @@ impl Candidate {
         Ok(())
     }
 
-    fn build_view(&self) -> Result<CandidateView> {
+    fn build_view(&self) -> Result<CandidateView<P>> {
         let commitments = self
             .commitments
             .iter()
@@ -348,11 +368,11 @@ enum CandidateStage {
 }
 
 /// One person-global inner redistribution bundle.
-pub struct InnerBundle {
-    candidates: BTreeMap<CommandId, Candidate>,
+pub struct InnerBundle<P: Profile = DefaultProfile> {
+    candidates: BTreeMap<CommandId, Candidate<P>>,
 }
 
-impl InnerBundle {
+impl<P: Profile> InnerBundle<P> {
     /// Starts identity and member candidates on one target shape.
     ///
     /// Every command starts before any commitment may open.
@@ -361,7 +381,7 @@ impl InnerBundle {
     ///
     /// Returns an error for fewer than two commands, duplicate identifiers or
     /// scopes, unequal target shapes, or a failed command start.
-    pub fn new(mut commands: Vec<Command>, log: &mut impl LogAct) -> Result<Self> {
+    pub fn new(mut commands: Vec<Command<P>>, log: &mut impl LogAct) -> Result<Self> {
         if commands.len() < 2 {
             return Err(Error::SupportMismatch);
         }
@@ -403,7 +423,7 @@ impl InnerBundle {
     /// # Errors
     ///
     /// Returns [`Error::ParticipantNotFound`] when the command is absent.
-    pub fn command(&self, command: CommandId) -> Result<&Command> {
+    pub fn command(&self, command: CommandId) -> Result<&Command<P>> {
         self.candidates
             .get(&command)
             .map(Candidate::command)
@@ -419,7 +439,7 @@ impl InnerBundle {
         &mut self,
         command: CommandId,
         role: RoleId,
-        commitment: Scalar,
+        commitment: ScalarFor<P>,
         log: &mut impl LogAct,
     ) -> Result<()> {
         let result = self
@@ -460,7 +480,7 @@ impl InnerBundle {
     pub fn open(
         &mut self,
         command: CommandId,
-        opening: Opening,
+        opening: Opening<P>,
         log: &mut impl LogAct,
     ) -> Result<()> {
         let result = self
@@ -474,6 +494,28 @@ impl InnerBundle {
         }
     }
 
+    /// Posts one local component contribution and permits its private deliveries.
+    ///
+    /// # Errors
+    ///
+    /// Any failure aborts every component.
+    pub fn open_contribution<'a>(
+        &mut self,
+        command: CommandId,
+        contribution: &'a Contribution<P>,
+        log: &mut impl LogAct,
+    ) -> Result<ReleasedContribution<'a, P>> {
+        let result = self
+            .candidates
+            .get_mut(&command)
+            .ok_or(Error::ParticipantNotFound)
+            .and_then(|candidate| candidate.open_contribution(contribution, log));
+        match result {
+            Ok(released) => Ok(released),
+            Err(error) => self.fail(log, error),
+        }
+    }
+
     /// Closes every component's opening phase.
     ///
     /// # Errors
@@ -482,7 +524,7 @@ impl InnerBundle {
     pub fn close_openings(
         &mut self,
         log: &mut impl LogAct,
-    ) -> Result<Vec<(CommandId, CandidateView)>> {
+    ) -> Result<Vec<(CommandId, CandidateView<P>)>> {
         let mut views = Vec::with_capacity(self.candidates.len());
         let mut failure = None;
         for (command, candidate) in &mut self.candidates {
@@ -505,7 +547,7 @@ impl InnerBundle {
     /// # Errors
     ///
     /// Any failure aborts every component.
-    pub fn receipt(&mut self, receipt: TargetReceipt, log: &mut impl LogAct) -> Result<()> {
+    pub fn receipt(&mut self, receipt: TargetReceipt<P>, log: &mut impl LogAct) -> Result<()> {
         let result = self
             .candidates
             .get_mut(&receipt.command())
@@ -555,8 +597,8 @@ impl InnerBundle {
     }
 }
 
-fn activate_candidates(
-    candidates: &mut [&mut Candidate],
+fn activate_candidates<P: Profile>(
+    candidates: &mut [&mut Candidate<P>],
     log: &mut impl LogAct,
 ) -> Result<Terminal> {
     if candidates.is_empty() {
@@ -620,13 +662,13 @@ fn activate_candidates(
     }
 }
 
-fn encode_candidate_view(
-    command: &Command,
-    commitments: &[(RoleId, Scalar)],
-    openings: &[Opening],
+fn encode_candidate_view<P: Profile>(
+    command: &Command<P>,
+    commitments: &[(RoleId, ScalarFor<P>)],
+    openings: &[Opening<P>],
 ) -> Result<Vec<u8>> {
-    let mut encoder = Encoder::new();
-    encoder.put_u8(VERSION);
+    let mut encoder = Encoder::<P>::for_profile();
+    encoder.put_u8(P::WIRE_ID);
     encoder.put_bytes(&command.to_bytes()?)?;
     encoder.put_u16(count_u16(commitments.len())?);
     for (role, commitment) in commitments {

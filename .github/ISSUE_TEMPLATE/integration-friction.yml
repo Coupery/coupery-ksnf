@@ -1,0 +1,54 @@
+name: Integration friction
+description: Report an API boundary that makes an application integration harder than needed.
+title: "integration: "
+labels:
+  - integration
+body:
+  - type: dropdown
+    id: boundary
+    attributes:
+      label: Boundary
+      options:
+        - LeafStore
+        - LogAct
+        - Genesis import
+        - Authenticated delivery
+        - Signing coordinator
+        - Redistribution
+        - Taproot adapter
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: task
+    attributes:
+      label: Task
+      description: What is the application trying to do?
+    validations:
+      required: true
+  - type: textarea
+    id: friction
+    attributes:
+      label: Friction
+      description: Show the smallest code sample or type mismatch that blocks the task.
+      render: rust
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected shape
+      description: What would make the task clear without moving policy into the crate?
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety
+      options:
+        - label: This report contains no live keys, shares, nonces, or wallet data.
+          required: true

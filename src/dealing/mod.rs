@@ -6,7 +6,9 @@ mod shape;
 mod target;
 
 pub use candidate::{Candidate, InnerBundle};
-pub use contribution::{Contribution, ContributionPoints, Opening, PrivateShare};
+pub use contribution::{
+    Contribution, ContributionPoints, Opening, PrivateShare, ReleasedContribution,
+};
 pub use shape::{
     Command, OuterShape, OuterTarget, RoleId, RoleSpec, SingleShape, TargetDevice, TargetId,
     TargetShape,
@@ -16,12 +18,11 @@ pub use target::{
 };
 
 use crate::encoding::Decoder;
+use crate::profile::Profile;
 use crate::{Error, Result};
 
-const VERSION: u8 = 1;
-
-fn expect_version(decoder: &mut Decoder<'_>) -> Result<()> {
-    if decoder.get_u8()? == VERSION {
+fn expect_version<P: Profile>(decoder: &mut Decoder<'_, P>) -> Result<()> {
+    if decoder.get_u8()? == P::WIRE_ID {
         Ok(())
     } else {
         Err(Error::UnsupportedVersion)

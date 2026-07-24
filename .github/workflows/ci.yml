@@ -1,0 +1,86 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  rust:
+    name: Rust (${{ matrix.features }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - features: minimal
+            cargo-args: --no-default-features
+          - features: default
+            cargo-args: ""
+          - features: ed25519
+            cargo-args: --no-default-features --features ed25519
+          - features: all
+            cargo-args: --all-features
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install Rust
+        run: rustup toolchain install 1.85.0 --profile minimal --component clippy,rustfmt
+      - name: Format
+        run: cargo +1.85.0 fmt --all -- --check
+      - name: Check
+        run: cargo +1.85.0 check --all-targets ${{ matrix.cargo-args }} --locked
+      - name: Test
+        run: cargo +1.85.0 test --all-targets ${{ matrix.cargo-args }} --locked
+      - name: Doc tests
+        run: cargo +1.85.0 test --doc ${{ matrix.cargo-args }} --locked
+      - name: Clippy
+        run: cargo +1.85.0 clippy --all-targets ${{ matrix.cargo-args }} --locked -- -D warnings
+      - name: Docs
+        env:
+          RUSTDOCFLAGS: -D warnings
+        run: cargo +1.85.0 doc ${{ matrix.cargo-args }} --no-deps --locked
+      - name: Package
+        if: matrix.features == 'all'
+        run: cargo +1.85.0 package --locked
+
+  public-api:
+    name: Public API
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install toolchains
+        run: |
+          rustup toolchain install 1.94.0 --profile minimal
+          rustup toolchain install nightly-2026-04-27 --profile minimal
+      - name: Install cargo-public-api
+        run: cargo +1.94.0 install cargo-public-api --version 0.52.0 --locked
+      - name: Check minimal surface
+        run: |
+          cargo +nightly-2026-04-27 public-api -sss --color never --no-default-features > /tmp/minimal.txt
+          diff -u public-api/minimal.txt /tmp/minimal.txt
+      - name: Check secp256k1 surface
+        run: |
+          cargo +nightly-2026-04-27 public-api -sss --color never --no-default-features --features secp256k1 > /tmp/secp256k1.txt
+          diff -u public-api/secp256k1.txt /tmp/secp256k1.txt
+      - name: Check Ed25519 surface
+        run: |
+          cargo +nightly-2026-04-27 public-api -sss --color never --no-default-features --features ed25519 > /tmp/ed25519.txt
+          diff -u public-api/ed25519.txt /tmp/ed25519.txt
+      - name: Check full surface
+        run: |
+          cargo +nightly-2026-04-27 public-api -sss --color never --all-features > /tmp/all.txt
+          diff -u public-api/all.txt /tmp/all.txt
+
+  semver:
+    name: SemVer
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - uses: obi1kenobi/cargo-semver-checks-action@6b69fcf40e9b5fb17adeb57e4b6ecd020649a239 # v2
+        with:
+          baseline-rev: ${{ github.event.pull_request.base.sha }}

@@ -1,8 +1,11 @@
-#![allow(missing_docs)]
+//! Genesis validation tests.
+
+#![cfg(feature = "secp256k1")]
 
 use coupery_ksnf::algebra::{Element, Point, Scalar, SecretScalar};
 use coupery_ksnf::genesis::{PublicDevice, PublicPerson, PublicPolynomial, ValidatedPublicGenesis};
 use coupery_ksnf::keys::SharePoint;
+use coupery_ksnf::profile::Secp256k1;
 use coupery_ksnf::shamir::Node;
 use coupery_ksnf::types::{DeviceId, PersonId, VaultId};
 use coupery_ksnf::{Error, Result};
@@ -33,7 +36,7 @@ fn genesis_checks_public_polynomials_and_attached_shares() -> Result<()> {
     )?;
     let people = vec![public_person_2, public_person_1];
     let genesis =
-        ValidatedPublicGenesis::from_parts(vault, public_polynomial(101, 17)?, people.clone())?;
+        ValidatedPublicGenesis::validate(vault, public_polynomial(101, 17)?, people.clone())?;
 
     let outer = genesis.outer_support(&[person_2, person_1])?;
     assert_eq!(outer.participants()[0].person(), person_1);
@@ -47,11 +50,16 @@ fn genesis_checks_public_polynomials_and_attached_shares() -> Result<()> {
         SecretScalar::new(Scalar::from(34_u64)),
         SecretScalar::new(Scalar::from(127_u64)),
     )?;
-    attached
-        .signing_share()
-        .expose(|share| assert_eq!(*share, Scalar::from(127_u64)));
-    attached.with_anchor(|share| assert_eq!(*share, Scalar::from(93_u64)));
     assert_eq!(attached.device(), device_11);
+    assert_eq!(
+        attached.identity_key(),
+        genesis.person(person_1)?.identity_key()
+    );
+    assert_eq!(
+        attached.member_point(),
+        genesis.person(person_1)?.member_point()
+    );
+    assert_eq!(attached.vault_key(), genesis.vault_key());
 
     assert_eq!(
         genesis
@@ -65,7 +73,7 @@ fn genesis_checks_public_polynomials_and_attached_shares() -> Result<()> {
         Some(Error::ShareMismatch)
     );
     assert_eq!(
-        ValidatedPublicGenesis::from_parts(vault, public_polynomial(101, 18)?, people).err(),
+        ValidatedPublicGenesis::validate(vault, public_polynomial(101, 18)?, people).err(),
         Some(Error::ShareMismatch)
     );
     Ok(())
@@ -86,8 +94,8 @@ fn zero_device_shares_are_valid() -> Result<()> {
             PublicDevice::new(
                 device,
                 Node::from_u64(1)?,
-                SharePoint::new(Element::IDENTITY),
-                SharePoint::new(Element::IDENTITY),
+                SharePoint::new(Element::<Secp256k1>::identity()),
+                SharePoint::new(Element::<Secp256k1>::identity()),
             ),
             PublicDevice::new(
                 sibling,
@@ -97,7 +105,7 @@ fn zero_device_shares_are_valid() -> Result<()> {
             ),
         ],
     )?;
-    let genesis = ValidatedPublicGenesis::from_parts(
+    let genesis = ValidatedPublicGenesis::validate(
         vault,
         PublicPolynomial::new(vec![Element::from_scalar(Scalar::from(7_u64))])?,
         vec![public_person],

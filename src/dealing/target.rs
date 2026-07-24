@@ -1,30 +1,47 @@
+use core::marker::PhantomData;
 use std::collections::BTreeMap;
 
-use crate::algebra::{Element, Scalar, SecretScalar};
+use frost_core::{Field, Group};
+
+use crate::algebra::{Element, ScalarFor, SecretScalar};
 use crate::encoding::{Decoder, Encoder};
 use crate::log_act::Terminal;
+use crate::profile::{DefaultProfile, Profile};
 use crate::types::{ActivationHandle, CommandId};
 use crate::{Error, Result};
 
 use super::{
-    Command, ContributionPoints, Opening, PrivateShare, RoleId, TargetId, TargetShape, VERSION,
+    Command, ContributionPoints, Opening, PrivateShare, RoleId, TargetId, TargetShape,
     expect_version,
 };
 
+type FieldOf<P> = <<P as Profile>::Group as Group>::Field;
+
 /// A complete public opening transcript.
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct CandidateView {
-    pub(super) command: Command,
-    pub(super) commitments: Vec<(RoleId, Scalar)>,
-    pub(super) openings: Vec<Opening>,
+#[derive(Clone, Eq, PartialEq)]
+pub struct CandidateView<P: Profile = DefaultProfile> {
+    pub(super) command: Command<P>,
+    pub(super) commitments: Vec<(RoleId, ScalarFor<P>)>,
+    pub(super) openings: Vec<Opening<P>>,
     pub(super) bytes: Vec<u8>,
-    pub(super) aggregate: ContributionPoints,
+    pub(super) aggregate: ContributionPoints<P>,
 }
 
-impl CandidateView {
+impl<P: Profile> core::fmt::Debug for CandidateView<P> {
+    fn fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        formatter
+            .debug_struct("CandidateView")
+            .field("command", &self.command)
+            .field("opening_count", &self.openings.len())
+            .field("aggregate", &self.aggregate)
+            .finish_non_exhaustive()
+    }
+}
+
+impl<P: Profile> CandidateView<P> {
     /// Returns the command.
     #[must_use]
-    pub const fn command(&self) -> &Command {
+    pub const fn command(&self) -> &Command<P> {
         &self.command
     }
 
@@ -36,7 +53,7 @@ impl CandidateView {
 
     /// Returns the summed public coefficient points.
     #[must_use]
-    pub const fn aggregate(&self) -> &ContributionPoints {
+    pub const fn aggregate(&self) -> &ContributionPoints<P> {
         &self.aggregate
     }
 
@@ -45,7 +62,7 @@ impl CandidateView {
     /// # Errors
     ///
     /// Returns [`Error::ParticipantNotFound`] when the role is absent.
-    pub fn opening(&self, role: RoleId) -> Result<&Opening> {
+    pub fn opening(&self, role: RoleId) -> Result<&Opening<P>> {
         self.openings
             .binary_search_by_key(&role, |opening| opening.role)
             .map(|index| &self.openings[index])
@@ -55,13 +72,14 @@ impl CandidateView {
 
 /// One target's authenticated receipt.
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct TargetReceipt {
+pub struct TargetReceipt<P: Profile = DefaultProfile> {
     pub(super) command: CommandId,
     pub(super) target: TargetId,
     pub(super) view: Vec<u8>,
+    profile: PhantomData<P>,
 }
 
-impl TargetReceipt {
+impl<P: Profile> TargetReceipt<P> {
     /// Creates a receipt after target authentication.
     #[must_use]
     pub const fn new(command: CommandId, target: TargetId, view: Vec<u8>) -> Self {
@@ -69,6 +87,7 @@ impl TargetReceipt {
             command,
             target,
             view,
+            profile: PhantomData,
         }
     }
 
@@ -96,8 +115,8 @@ impl TargetReceipt {
     ///
     /// Returns [`Error::LengthOverflow`] for an oversized view.
     pub fn to_bytes(&self) -> Result<Vec<u8>> {
-        let mut encoder = Encoder::new();
-        encoder.put_u8(VERSION);
+        let mut encoder = Encoder::<P>::for_profile();
+        encoder.put_u8(P::WIRE_ID);
         encoder.put_fixed(self.command.as_bytes());
         self.target.encode(&mut encoder);
         encoder.put_bytes(&self.view)?;
@@ -110,12 +129,13 @@ impl TargetReceipt {
     ///
     /// Returns an error for malformed or trailing data.
     pub fn from_bytes(bytes: &[u8]) -> Result<Self> {
-        let mut decoder = Decoder::new(bytes);
+        let mut decoder = Decoder::<P>::for_profile(bytes);
         expect_version(&mut decoder)?;
         let receipt = Self {
             command: CommandId::new(decoder.get_fixed()?),
             target: TargetId::decode(&mut decoder)?,
             view: decoder.get_bytes()?.to_vec(),
+            profile: PhantomData,
         };
         decoder.finish()?;
         Ok(receipt)
@@ -123,15 +143,15 @@ impl TargetReceipt {
 }
 
 /// One target's unactivated share.
-pub struct PendingShare {
+pub struct PendingShare<P: Profile = DefaultProfile> {
     target: TargetId,
-    shape: TargetShape,
-    share: SecretScalar,
-    public: Element,
-    points: ContributionPoints,
+    shape: TargetShape<P>,
+    share: SecretScalar<P>,
+    public: Element<P>,
+    points: ContributionPoints<P>,
 }
 
-impl PendingShare {
+impl<P: Profile> PendingShare<P> {
     /// Returns the target.
     #[must_use]
     pub const fn target(&self) -> TargetId {
@@ -143,7 +163,7 @@ impl PendingShare {
     /// # Errors
     ///
     /// Returns [`Error::ShareMismatch`] if the aggregate share point differs.
-    pub fn resolve(self, terminal: Terminal) -> Result<Option<InstalledShare>> {
+    pub fn resolve(self, terminal: Terminal) -> Result<Option<InstalledShare<P>>> {
         match terminal {
             Terminal::Aborted => Ok(None),
             Terminal::Activated(handle) => {
@@ -164,16 +184,16 @@ impl PendingShare {
 }
 
 /// One installed target share.
-pub struct InstalledShare {
+pub struct InstalledShare<P: Profile = DefaultProfile> {
     target: TargetId,
-    shape: TargetShape,
+    shape: TargetShape<P>,
     handle: ActivationHandle,
-    share: SecretScalar,
-    public: Element,
-    points: ContributionPoints,
+    share: SecretScalar<P>,
+    public: Element<P>,
+    points: ContributionPoints<P>,
 }
 
-impl InstalledShare {
+impl<P: Profile> InstalledShare<P> {
     /// Returns the target.
     #[must_use]
     pub const fn target(&self) -> TargetId {
@@ -182,7 +202,7 @@ impl InstalledShare {
 
     /// Returns the installed target shape.
     #[must_use]
-    pub const fn shape(&self) -> &TargetShape {
+    pub const fn shape(&self) -> &TargetShape<P> {
         &self.shape
     }
 
@@ -194,27 +214,27 @@ impl InstalledShare {
 
     /// Returns the public share element.
     #[must_use]
-    pub const fn public(&self) -> Element {
+    pub const fn public(&self) -> Element<P> {
         self.public
     }
 
     /// Returns the installed block's public coefficient points.
     #[must_use]
-    pub const fn points(&self) -> &ContributionPoints {
+    pub const fn points(&self) -> &ContributionPoints<P> {
         &self.points
     }
 
     /// Borrows the scalar for one operation.
-    pub fn expose<T>(&self, use_share: impl FnOnce(&Scalar) -> T) -> T {
+    pub fn expose<T>(&self, use_share: impl FnOnce(&ScalarFor<P>) -> T) -> T {
         self.share.expose(use_share)
     }
 
-    pub(crate) fn into_share(self) -> SecretScalar {
+    pub(crate) fn into_share(self) -> SecretScalar<P> {
         self.share
     }
 }
 
-impl core::fmt::Debug for InstalledShare {
+impl<P: Profile> core::fmt::Debug for InstalledShare<P> {
     fn fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         formatter
             .debug_struct("InstalledShare")
@@ -229,33 +249,33 @@ impl core::fmt::Debug for InstalledShare {
 }
 
 /// One target's receipt and pending share.
-pub struct TargetReady {
-    receipt: TargetReceipt,
-    pending: PendingShare,
+pub struct TargetReady<P: Profile = DefaultProfile> {
+    receipt: TargetReceipt<P>,
+    pending: PendingShare<P>,
 }
 
-impl TargetReady {
+impl<P: Profile> TargetReady<P> {
     /// Splits the public receipt from the private pending share.
     #[must_use]
-    pub fn into_parts(self) -> (TargetReceipt, PendingShare) {
+    pub fn into_parts(self) -> (TargetReceipt<P>, PendingShare<P>) {
         (self.receipt, self.pending)
     }
 }
 
 /// A target-local private-share accumulator.
-pub struct TargetAccumulator {
-    view: CandidateView,
+pub struct TargetAccumulator<P: Profile = DefaultProfile> {
+    view: CandidateView<P>,
     target: TargetId,
-    shares: BTreeMap<RoleId, SecretScalar>,
+    shares: BTreeMap<RoleId, SecretScalar<P>>,
 }
 
-impl TargetAccumulator {
+impl<P: Profile> TargetAccumulator<P> {
     /// Starts a target-local accumulator for one complete public view.
     ///
     /// # Errors
     ///
     /// Returns [`Error::ParticipantNotFound`] when the target is absent.
-    pub fn new(view: CandidateView, target: TargetId) -> Result<Self> {
+    pub fn new(view: CandidateView<P>, target: TargetId) -> Result<Self> {
         view.command.shape.target_node(target)?;
         Ok(Self {
             view,
@@ -272,7 +292,7 @@ impl TargetAccumulator {
     ///
     /// Returns an error for a changed tag, invalid evaluation, or altered
     /// replay.
-    pub fn receive(&mut self, share: PrivateShare) -> Result<()> {
+    pub fn receive(&mut self, share: PrivateShare<P>) -> Result<()> {
         if share.command != self.view.command.command || share.target != self.target {
             return Err(Error::InvalidTranscript);
         }
@@ -301,7 +321,7 @@ impl TargetAccumulator {
     /// # Errors
     ///
     /// Returns [`Error::SupportMismatch`] when any role is missing.
-    pub fn finish(self) -> Result<TargetReady> {
+    pub fn finish(self) -> Result<TargetReady<P>> {
         if self.shares.len() != self.view.command.roles.len()
             || self
                 .view
@@ -312,9 +332,12 @@ impl TargetAccumulator {
         {
             return Err(Error::SupportMismatch);
         }
-        let value = self.shares.values().fold(Scalar::ZERO, |sum, share| {
-            sum + share.expose(|value| *value)
-        });
+        let value = self
+            .shares
+            .values()
+            .fold(FieldOf::<P>::zero(), |sum, share| {
+                sum + share.expose(|value| *value)
+            });
         let public = self
             .view
             .aggregate
@@ -327,6 +350,7 @@ impl TargetAccumulator {
                 command: self.view.command.command,
                 target: self.target,
                 view: self.view.bytes,
+                profile: PhantomData,
             },
             pending: PendingShare {
                 target: self.target,

@@ -1,0 +1,1094 @@
+pub mod coupery_ksnf
+pub mod coupery_ksnf::algebra
+pub use coupery_ksnf::algebra::Scalar
+pub struct coupery_ksnf::algebra::Element<P: coupery_ksnf::profile::Profile>(_)
+impl<P: coupery_ksnf::profile::Profile> coupery_ksnf::algebra::Element<P>
+pub const fn coupery_ksnf::algebra::Element<P>::as_raw(&self) -> &coupery_ksnf::profile::RawElement<P>
+pub fn coupery_ksnf::algebra::Element<P>::from_bytes(&[u8]) -> coupery_ksnf::error::Result<Self>
+pub fn coupery_ksnf::algebra::Element<P>::from_scalar(coupery_ksnf::algebra::ScalarFor<P>) -> Self
+pub fn coupery_ksnf::algebra::Element<P>::generator() -> Self
+pub fn coupery_ksnf::algebra::Element<P>::identity() -> Self
+pub fn coupery_ksnf::algebra::Element<P>::is_identity(&self) -> bool
+pub const fn coupery_ksnf::algebra::Element<P>::new(coupery_ksnf::profile::RawElement<P>) -> Self
+pub fn coupery_ksnf::algebra::Element<P>::to_bytes(self) -> alloc::vec::Vec<u8>
+impl<P: coupery_ksnf::profile::Profile> core::convert::From<coupery_ksnf::algebra::Point<P>> for coupery_ksnf::algebra::Element<P>
+pub fn coupery_ksnf::algebra::Element<P>::from(coupery_ksnf::algebra::Point<P>) -> Self
+impl<P: coupery_ksnf::profile::Profile> core::convert::TryFrom<coupery_ksnf::algebra::Element<P>> for coupery_ksnf::algebra::Point<P>
+pub type coupery_ksnf::algebra::Point<P>::Error = coupery_ksnf::error::Error
+pub fn coupery_ksnf::algebra::Point<P>::try_from(coupery_ksnf::algebra::Element<P>) -> coupery_ksnf::error::Result<Self>
+impl<P: coupery_ksnf::profile::Profile> core::fmt::Debug for coupery_ksnf::algebra::Element<P>
+pub fn coupery_ksnf::algebra::Element<P>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl<P: coupery_ksnf::profile::Profile> core::ops::arith::Add for coupery_ksnf::algebra::Element<P>
+pub type coupery_ksnf::algebra::Element<P>::Output = coupery_ksnf::algebra::Element<P>
+pub fn coupery_ksnf::algebra::Element<P>::add(self, Self) -> Self::Output
+impl<P: coupery_ksnf::profile::Profile> core::ops::arith::Mul<<<<P as coupery_ksnf::profile::Profile>::Group as frost_core::traits::Group>::Field as frost_core::traits::Field>::Scalar> for coupery_ksnf::algebra::Element<P>
+pub type coupery_ksnf::algebra::Element<P>::Output = coupery_ksnf::algebra::Element<P>
+pub fn coupery_ksnf::algebra::Element<P>::mul(self, coupery_ksnf::algebra::ScalarFor<P>) -> Self::Output
+impl<P: coupery_ksnf::profile::Profile> core::ops::arith::Sub for coupery_ksnf::algebra::Element<P>
+pub type coupery_ksnf::algebra::Element<P>::Output = coupery_ksnf::algebra::Element<P>
+pub fn coupery_ksnf::algebra::Element<P>::sub(self, Self) -> Self::Output
+pub struct coupery_ksnf::algebra::Point<P: coupery_ksnf::profile::Profile>(_)
+impl<P: coupery_ksnf::profile::Profile> coupery_ksnf::algebra::Point<P>
+pub const fn coupery_ksnf::algebra::Point<P>::as_raw(&self) -> &coupery_ksnf::profile::RawElement<P>
+pub fn coupery_ksnf::algebra::Point<P>::from_bytes(&[u8]) -> coupery_ksnf::error::Result<Self>
+pub fn coupery_ksnf::algebra::Point<P>::from_scalar(coupery_ksnf::algebra::ScalarFor<P>) -> coupery_ksnf::error::Result<Self>
+pub fn coupery_ksnf::algebra::Point<P>::new(coupery_ksnf::profile::RawElement<P>) -> coupery_ksnf::error::Result<Self>
+pub fn coupery_ksnf::algebra::Point<P>::to_bytes(self) -> coupery_ksnf::profile::PointBytes<P>
+impl<P: coupery_ksnf::profile::Profile> core::convert::From<coupery_ksnf::algebra::Point<P>> for coupery_ksnf::algebra::Element<P>
+pub fn coupery_ksnf::algebra::Element<P>::from(coupery_ksnf::algebra::Point<P>) -> Self
+impl<P: coupery_ksnf::profile::Profile> core::convert::TryFrom<coupery_ksnf::algebra::Element<P>> for coupery_ksnf::algebra::Point<P>
+pub type coupery_ksnf::algebra::Point<P>::Error = coupery_ksnf::error::Error
+pub fn coupery_ksnf::algebra::Point<P>::try_from(coupery_ksnf::algebra::Element<P>) -> coupery_ksnf::error::Result<Self>
+impl<P: coupery_ksnf::profile::Profile> core::fmt::Debug for coupery_ksnf::algebra::Point<P>
+pub fn coupery_ksnf::algebra::Point<P>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub struct coupery_ksnf::algebra::SecretScalar<P: coupery_ksnf::profile::Profile>(_)
+impl<P: coupery_ksnf::profile::Profile> coupery_ksnf::algebra::SecretScalar<P>
+pub fn coupery_ksnf::algebra::SecretScalar<P>::expose<T>(&self, impl core::ops::function::FnOnce(&coupery_ksnf::algebra::ScalarFor<P>) -> T) -> T
+pub const fn coupery_ksnf::algebra::SecretScalar<P>::new(coupery_ksnf::algebra::ScalarFor<P>) -> Self
+impl<P: coupery_ksnf::profile::Profile> core::fmt::Debug for coupery_ksnf::algebra::SecretScalar<P>
+pub fn coupery_ksnf::algebra::SecretScalar<P>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl<P: coupery_ksnf::profile::Profile> core::ops::drop::Drop for coupery_ksnf::algebra::SecretScalar<P>
+pub fn coupery_ksnf::algebra::SecretScalar<P>::drop(&mut self)
+pub type coupery_ksnf::algebra::ScalarFor<P> = coupery_ksnf::profile::Scalar<P>
+pub mod coupery_ksnf::auth
+pub struct coupery_ksnf::auth::AuthenticatedAbort
+impl coupery_ksnf::auth::AuthenticatedAbort
+pub fn coupery_ksnf::auth::AuthenticatedAbort::new(coupery_ksnf::types::LeafAttempt, coupery_ksnf::types::LeafAttempt, coupery_ksnf::types::SessionId, &[u8]) -> Self
+pub const fn coupery_ksnf::auth::AuthenticatedAbort::receiver(&self) -> coupery_ksnf::types::LeafAttempt
+pub fn coupery_ksnf::auth::AuthenticatedAbort::reservation(&self) -> &[u8]
+pub const fn coupery_ksnf::auth::AuthenticatedAbort::sender(&self) -> coupery_ksnf::types::LeafAttempt
+pub const fn coupery_ksnf::auth::AuthenticatedAbort::session(&self) -> coupery_ksnf::types::SessionId
+impl core::fmt::Debug for coupery_ksnf::auth::AuthenticatedAbort
+pub fn coupery_ksnf::auth::AuthenticatedAbort::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub struct coupery_ksnf::auth::AuthenticatedCommitment<P: coupery_ksnf::profile::Profile>
+impl<P: coupery_ksnf::profile::Profile> coupery_ksnf::auth::AuthenticatedCommitment<P>
+pub const fn coupery_ksnf::auth::AuthenticatedCommitment<P>::commitment(&self) -> coupery_ksnf::algebra::ScalarFor<P>
+pub fn coupery_ksnf::auth::AuthenticatedCommitment<P>::new(coupery_ksnf::types::LeafAttempt, coupery_ksnf::types::LeafAttempt, coupery_ksnf::types::SessionId, &[u8], coupery_ksnf::algebra::ScalarFor<P>) -> Self
+pub const fn coupery_ksnf::auth::AuthenticatedCommitment<P>::receiver(&self) -> coupery_ksnf::types::LeafAttempt
+pub fn coupery_ksnf::auth::AuthenticatedCommitment<P>::reservation(&self) -> &[u8]
+pub const fn coupery_ksnf::auth::AuthenticatedCommitment<P>::sender(&self) -> coupery_ksnf::types::LeafAttempt
+pub const fn coupery_ksnf::auth::AuthenticatedCommitment<P>::session(&self) -> coupery_ksnf::types::SessionId
+impl<P: coupery_ksnf::profile::Profile> core::fmt::Debug for coupery_ksnf::auth::AuthenticatedCommitment<P>
+pub fn coupery_ksnf::auth::AuthenticatedCommitment<P>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub struct coupery_ksnf::auth::AuthenticatedOpening<P: coupery_ksnf::profile::Profile>
+impl<P: coupery_ksnf::profile::Profile> coupery_ksnf::auth::AuthenticatedOpening<P>
+pub fn coupery_ksnf::auth::AuthenticatedOpening<P>::new(coupery_ksnf::types::LeafAttempt, coupery_ksnf::types::LeafAttempt, coupery_ksnf::types::SessionId, &[u8], coupery_ksnf::signing::NoncePair<P>) -> Self
+pub const fn coupery_ksnf::auth::AuthenticatedOpening<P>::nonce(&self) -> coupery_ksnf::signing::NoncePair<P>
+pub const fn coupery_ksnf::auth::AuthenticatedOpening<P>::receiver(&self) -> coupery_ksnf::types::LeafAttempt
+pub fn coupery_ksnf::auth::AuthenticatedOpening<P>::reservation(&self) -> &[u8]
+pub const fn coupery_ksnf::auth::AuthenticatedOpening<P>::sender(&self) -> coupery_ksnf::types::LeafAttempt
+pub const fn coupery_ksnf::auth::AuthenticatedOpening<P>::session(&self) -> coupery_ksnf::types::SessionId
+impl<P: coupery_ksnf::profile::Profile> core::fmt::Debug for coupery_ksnf::auth::AuthenticatedOpening<P>
+pub fn coupery_ksnf::auth::AuthenticatedOpening<P>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub struct coupery_ksnf::auth::CommitmentView<P: coupery_ksnf::profile::Profile>
+impl<P: coupery_ksnf::profile::Profile> coupery_ksnf::auth::CommitmentView<P>
+pub fn coupery_ksnf::auth::CommitmentView<P>::commitment(&self, coupery_ksnf::types::LeafAttempt) -> coupery_ksnf::error::Result<coupery_ksnf::algebra::ScalarFor<P>>
+pub fn coupery_ksnf::auth::CommitmentView<P>::new(&coupery_ksnf::support::InnerSupport<P>, alloc::vec::Vec<coupery_ksnf::auth::AuthenticatedCommitment<P>>) -> coupery_ksnf::error::Result<Self>
+pub const fn coupery_ksnf::auth::CommitmentView<P>::receiver(&self) -> coupery_ksnf::types::LeafAttempt
+pub fn coupery_ksnf::auth::CommitmentView<P>::reservation(&self) -> &[u8]
+pub const fn coupery_ksnf::auth::CommitmentView<P>::session(&self) -> coupery_ksnf::types::SessionId
+pub fn coupery_ksnf::auth::CommitmentView<P>::to_bytes(&self) -> coupery_ksnf::error::Result<zeroize::Zeroizing<alloc::vec::Vec<u8>>>
+impl<P: coupery_ksnf::profile::Profile> core::fmt::Debug for coupery_ksnf::auth::CommitmentView<P>
+pub fn coupery_ksnf::auth::CommitmentView<P>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub struct coupery_ksnf::auth::OpeningView<P: coupery_ksnf::profile::Profile>
+impl<P: coupery_ksnf::profile::Profile> coupery_ksnf::auth::OpeningView<P>
+pub fn coupery_ksnf::auth::OpeningView<P>::new(&coupery_ksnf::support::InnerSupport<P>, alloc::vec::Vec<coupery_ksnf::auth::AuthenticatedOpening<P>>) -> coupery_ksnf::error::Result<Self>
+pub const fn coupery_ksnf::auth::OpeningView<P>::receiver(&self) -> coupery_ksnf::types::LeafAttempt
+pub fn coupery_ksnf::auth::OpeningView<P>::reservation(&self) -> &[u8]
+pub const fn coupery_ksnf::auth::OpeningView<P>::session(&self) -> coupery_ksnf::types::SessionId
+pub fn coupery_ksnf::auth::OpeningView<P>::to_bytes(&self) -> coupery_ksnf::error::Result<zeroize::Zeroizing<alloc::vec::Vec<u8>>>
+pub fn coupery_ksnf::auth::OpeningView<P>::verify(&self, &coupery_ksnf::auth::CommitmentView<P>, &coupery_ksnf::support::InnerSupport<P>) -> coupery_ksnf::error::Result<coupery_ksnf::signing::DeviceNonceSet<P>>
+impl<P: coupery_ksnf::profile::Profile> core::fmt::Debug for coupery_ksnf::auth::OpeningView<P>
+pub fn coupery_ksnf::auth::OpeningView<P>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn coupery_ksnf::auth::nonce_commitment<P: coupery_ksnf::profile::Profile>(coupery_ksnf::types::LeafAttempt, &[u8], coupery_ksnf::signing::NoncePair<P>) -> coupery_ksnf::error::Result<coupery_ksnf::algebra::ScalarFor<P>>
+pub mod coupery_ksnf::dealing
+pub enum coupery_ksnf::dealing::ContributionPoints<P: coupery_ksnf::profile::Profile>
+pub coupery_ksnf::dealing::ContributionPoints::Outer
+pub coupery_ksnf::dealing::ContributionPoints::Outer::members: alloc::vec::Vec<(coupery_ksnf::types::PersonId, alloc::vec::Vec<coupery_ksnf::algebra::Element<P>>)>
+pub coupery_ksnf::dealing::ContributionPoints::Outer::outer: alloc::vec::Vec<coupery_ksnf::algebra::Element<P>>
+pub coupery_ksnf::dealing::ContributionPoints::Single(alloc::vec::Vec<coupery_ksnf::algebra::Element<P>>)
+impl<P: coupery_ksnf::profile::Profile> coupery_ksnf::dealing::ContributionPoints<P>
+pub fn coupery_ksnf::dealing::ContributionPoints<P>::constant(&self) -> coupery_ksnf::error::Result<coupery_ksnf::algebra::Element<P>>
+pub fn coupery_ksnf::dealing::ContributionPoints<P>::from_bytes(&[u8]) -> coupery_ksnf::error::Result<Self>
+pub fn coupery_ksnf::dealing::ContributionPoints<P>::member_constant(&self, coupery_ksnf::types::PersonId) -> coupery_ksnf::error::Result<coupery_ksnf::algebra::Element<P>>
+pub fn coupery_ksnf::dealing::ContributionPoints<P>::to_bytes(&self) -> coupery_ksnf::error::Result<alloc::vec::Vec<u8>>
+pub fn coupery_ksnf::dealing::ContributionPoints<P>::validate(&self, &coupery_ksnf::dealing::TargetShape<P>, coupery_ksnf::algebra::Element<P>) -> coupery_ksnf::error::Result<()>
+pub enum coupery_ksnf::dealing::RoleId
+pub coupery_ksnf::dealing::RoleId::Refresher(coupery_ksnf::types::DeviceId)
+pub coupery_ksnf::dealing::RoleId::Source(coupery_ksnf::types::DeviceId)
+impl coupery_ksnf::dealing::RoleId
+pub const fn coupery_ksnf::dealing::RoleId::device(self) -> coupery_ksnf::types::DeviceId
+pub enum coupery_ksnf::dealing::TargetId
+pub coupery_ksnf::dealing::TargetId::Outer
+pub coupery_ksnf::dealing::TargetId::Outer::device: coupery_ksnf::types::DeviceId
+pub coupery_ksnf::dealing::TargetId::Outer::person: coupery_ksnf::types::PersonId
+pub coupery_ksnf::dealing::TargetId::Single(coupery_ksnf::types::DeviceId)
+impl coupery_ksnf::dealing::TargetId
+pub const fn coupery_ksnf::dealing::TargetId::device(self) -> coupery_ksnf::types::DeviceId
+pub enum coupery_ksnf::dealing::TargetShape<P: coupery_ksnf::profile::Profile>
+pub coupery_ksnf::dealing::TargetShape::Outer(coupery_ksnf::dealing::OuterShape<P>)
+pub coupery_ksnf::dealing::TargetShape::Single(coupery_ksnf::dealing::SingleShape<P>)
+impl<P: coupery_ksnf::profile::Profile> coupery_ksnf::dealing::TargetShape<P>
+pub fn coupery_ksnf::dealing::TargetShape<P>::targets(&self) -> alloc::vec::Vec<coupery_ksnf::dealing::TargetId>
+pub struct coupery_ksnf::dealing::Candidate<P: coupery_ksnf::profile::Profile>
+impl<P: coupery_ksnf::profile::Profile> coupery_ksnf::dealing::Candidate<P>
+pub fn coupery_ksnf::dealing::Candidate<P>::abort(&mut self, &mut impl coupery_ksnf::log_act::LogAct) -> coupery_ksnf::error::Result<coupery_ksnf::log_act::Terminal>
+pub fn coupery_ksnf::dealing::Candidate<P>::activate(&mut self, &mut impl coupery_ksnf::log_act::LogAct) -> coupery_ksnf::error::Result<coupery_ksnf::log_act::Terminal>
+pub fn coupery_ksnf::dealing::Candidate<P>::close_commitments(&mut self, &mut impl coupery_ksnf::log_act::LogAct) -> coupery_ksnf::error::Result<()>
+pub fn coupery_ksnf::dealing::Candidate<P>::close_openings(&mut self, &mut impl coupery_ksnf::log_act::LogAct) -> coupery_ksnf::error::Result<coupery_ksnf::dealing::CandidateView<P>>
+pub const fn coupery_ksnf::dealing::Candidate<P>::command(&self) -> &coupery_ksnf::dealing::Command<P>
+pub fn coupery_ksnf::dealing::Candidate<P>::commit(&mut self, coupery_ksnf::dealing::RoleId, coupery_ksnf::algebra::ScalarFor<P>, &mut impl coupery_ksnf::log_act::LogAct) -> coupery_ksnf::error::Result<()>
+pub fn coupery_ksnf::dealing::Candidate<P>::new(coupery_ksnf::dealing::Command<P>, &mut impl coupery_ksnf::log_act::LogAct) -> coupery_ksnf::error::Result<Self>
+pub fn coupery_ksnf::dealing::Candidate<P>::open(&mut self, coupery_ksnf::dealing::Opening<P>, &mut impl coupery_ksnf::log_act::LogAct) -> coupery_ksnf::error::Result<()>
+pub fn coupery_ksnf::dealing::Candidate<P>::open_contribution<'a>(&mut self, &'a coupery_ksnf::dealing::Contribution<P>, &mut impl coupery_ksnf::log_act::LogAct) -> coupery_ksnf::error::Result<coupery_ksnf::dealing::ReleasedContribution<'a, P>>
+pub fn coupery_ksnf::dealing::Candidate<P>::receipt(&mut self, coupery_ksnf::dealing::TargetReceipt<P>, &mut impl coupery_ksnf::log_act::LogAct) -> coupery_ksnf::error::Result<()>
+pub struct coupery_ksnf::dealing::CandidateView<P: coupery_ksnf::profile::Profile>
+impl<P: coupery_ksnf::profile::Profile> coupery_ksnf::dealing::CandidateView<P>
+pub const fn coupery_ksnf::dealing::CandidateView<P>::aggregate(&self) -> &coupery_ksnf::dealing::ContributionPoints<P>
+pub fn coupery_ksnf::dealing::CandidateView<P>::as_bytes(&self) -> &[u8]
+pub const fn coupery_ksnf::dealing::CandidateView<P>::command(&self) -> &coupery_ksnf::dealing::Command<P>
+pub fn coupery_ksnf::dealing::CandidateView<P>::opening(&self, coupery_ksnf::dealing::RoleId) -> coupery_ksnf::error::Result<&coupery_ksnf::dealing::Opening<P>>
+impl<P: coupery_ksnf::profile::Profile> core::fmt::Debug for coupery_ksnf::dealing::CandidateView<P>
+pub fn coupery_ksnf::dealing::CandidateView<P>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub struct coupery_ksnf::dealing::Command<P: coupery_ksnf::profile::Profile>
+impl<P: coupery_ksnf::profile::Profile> coupery_ksnf::dealing::Command<P>
+pub const fn coupery_ksnf::dealing::Command<P>::anchor(&self) -> coupery_ksnf::algebra::Point<P>
+pub const fn coupery_ksnf::dealing::Command<P>::id(&self) -> coupery_ksnf::types::CommandId
+pub fn coupery_ksnf::dealing::Command<P>::new(coupery_ksnf::types::ScopeId, coupery_ksnf::types::CommandId, coupery_ksnf::types::ActivationHandle, coupery_ksnf::algebra::Point<P>, coupery_ksnf::dealing::TargetShape<P>, alloc::vec::Vec<coupery_ksnf::dealing::RoleSpec<P>>) -> coupery_ksnf::error::Result<Self>
+pub const fn coupery_ksnf::dealing::Command<P>::predecessor(&self) -> coupery_ksnf::types::ActivationHandle
+pub fn coupery_ksnf::dealing::Command<P>::roles(&self) -> &[coupery_ksnf::dealing::RoleSpec<P>]
+pub const fn coupery_ksnf::dealing::Command<P>::scope(&self) -> coupery_ksnf::types::ScopeId
+pub const fn coupery_ksnf::dealing::Command<P>::shape(&self) -> &coupery_ksnf::dealing::TargetShape<P>
+pub fn coupery_ksnf::dealing::Command<P>::to_bytes(&self) -> coupery_ksnf::error::Result<alloc::vec::Vec<u8>>
+pub fn coupery_ksnf::dealing::Command<P>::verify_bytes(&self, &[u8]) -> coupery_ksnf::error::Result<()>
+pub struct coupery_ksnf::dealing::Contribution<P: coupery_ksnf::profile::Profile>
+impl<P: coupery_ksnf::profile::Profile> coupery_ksnf::dealing::Contribution<P>
+pub const fn coupery_ksnf::dealing::Contribution<P>::commitment(&self) -> coupery_ksnf::algebra::ScalarFor<P>
+pub fn coupery_ksnf::dealing::Contribution<P>::refresher(&coupery_ksnf::dealing::Command<P>, coupery_ksnf::types::DeviceId, &mut impl rand_core::CryptoRng + rand_core::RngCore) -> coupery_ksnf::error::Result<Self>
+pub const fn coupery_ksnf::dealing::Contribution<P>::role(&self) -> coupery_ksnf::dealing::RoleId
+pub fn coupery_ksnf::dealing::Contribution<P>::source(&coupery_ksnf::dealing::Command<P>, coupery_ksnf::types::DeviceId, &coupery_ksnf::algebra::SecretScalar<P>, &mut impl rand_core::CryptoRng + rand_core::RngCore) -> coupery_ksnf::error::Result<Self>
+pub struct coupery_ksnf::dealing::InnerBundle<P: coupery_ksnf::profile::Profile>
+impl<P: coupery_ksnf::profile::Profile> coupery_ksnf::dealing::InnerBundle<P>
+pub fn coupery_ksnf::dealing::InnerBundle<P>::abort(&mut self, &mut impl coupery_ksnf::log_act::LogAct) -> coupery_ksnf::error::Result<coupery_ksnf::log_act::Terminal>
+pub fn coupery_ksnf::dealing::InnerBundle<P>::activate(&mut self, &mut impl coupery_ksnf::log_act::LogAct) -> coupery_ksnf::error::Result<coupery_ksnf::log_act::Terminal>
+pub fn coupery_ksnf::dealing::InnerBundle<P>::close_commitments(&mut self, &mut impl coupery_ksnf::log_act::LogAct) -> coupery_ksnf::error::Result<()>
+pub fn coupery_ksnf::dealing::InnerBundle<P>::close_openings(&mut self, &mut impl coupery_ksnf::log_act::LogAct) -> coupery_ksnf::error::Result<alloc::vec::Vec<(coupery_ksnf::types::CommandId, coupery_ksnf::dealing::CandidateView<P>)>>
+pub fn coupery_ksnf::dealing::InnerBundle<P>::command(&self, coupery_ksnf::types::CommandId) -> coupery_ksnf::error::Result<&coupery_ksnf::dealing::Command<P>>
+pub fn coupery_ksnf::dealing::InnerBundle<P>::commit(&mut self, coupery_ksnf::types::CommandId, coupery_ksnf::dealing::RoleId, coupery_ksnf::algebra::ScalarFor<P>, &mut impl coupery_ksnf::log_act::LogAct) -> coupery_ksnf::error::Result<()>
+pub fn coupery_ksnf::dealing::InnerBundle<P>::new(alloc::vec::Vec<coupery_ksnf::dealing::Command<P>>, &mut impl coupery_ksnf::log_act::LogAct) -> coupery_ksnf::error::Result<Self>
+pub fn coupery_ksnf::dealing::InnerBundle<P>::open(&mut self, coupery_ksnf::types::CommandId, coupery_ksnf::dealing::Opening<P>, &mut impl coupery_ksnf::log_act::LogAct) -> coupery_ksnf::error::Result<()>
+pub fn coupery_ksnf::dealing::InnerBundle<P>::open_contribution<'a>(&mut self, coupery_ksnf::types::CommandId, &'a coupery_ksnf::dealing::Contribution<P>, &mut impl coupery_ksnf::log_act::LogAct) -> coupery_ksnf::error::Result<coupery_ksnf::dealing::ReleasedContribution<'a, P>>
+pub fn coupery_ksnf::dealing::InnerBundle<P>::receipt(&mut self, coupery_ksnf::dealing::TargetReceipt<P>, &mut impl coupery_ksnf::log_act::LogAct) -> coupery_ksnf::error::Result<()>
+pub struct coupery_ksnf::dealing::InstalledShare<P: coupery_ksnf::profile::Profile>
+impl<P: coupery_ksnf::profile::Profile> coupery_ksnf::dealing::InstalledShare<P>
+pub fn coupery_ksnf::dealing::InstalledShare<P>::expose<T>(&self, impl core::ops::function::FnOnce(&coupery_ksnf::algebra::ScalarFor<P>) -> T) -> T
+pub const fn coupery_ksnf::dealing::InstalledShare<P>::handle(&self) -> coupery_ksnf::types::ActivationHandle
+pub const fn coupery_ksnf::dealing::InstalledShare<P>::points(&self) -> &coupery_ksnf::dealing::ContributionPoints<P>
+pub const fn coupery_ksnf::dealing::InstalledShare<P>::public(&self) -> coupery_ksnf::algebra::Element<P>
+pub const fn coupery_ksnf::dealing::InstalledShare<P>::shape(&self) -> &coupery_ksnf::dealing::TargetShape<P>
+pub const fn coupery_ksnf::dealing::InstalledShare<P>::target(&self) -> coupery_ksnf::dealing::TargetId
+impl<P: coupery_ksnf::profile::Profile> core::fmt::Debug for coupery_ksnf::dealing::InstalledShare<P>
+pub fn coupery_ksnf::dealing::InstalledShare<P>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub struct coupery_ksnf::dealing::Opening<P: coupery_ksnf::profile::Profile>
+impl<P: coupery_ksnf::profile::Profile> coupery_ksnf::dealing::Opening<P>
+pub fn coupery_ksnf::dealing::Opening<P>::from_bytes(&[u8]) -> coupery_ksnf::error::Result<Self>
+pub const fn coupery_ksnf::dealing::Opening<P>::new(coupery_ksnf::dealing::RoleId, coupery_ksnf::dealing::ContributionPoints<P>, coupery_ksnf::algebra::ScalarFor<P>) -> Self
+pub const fn coupery_ksnf::dealing::Opening<P>::points(&self) -> &coupery_ksnf::dealing::ContributionPoints<P>
+pub const fn coupery_ksnf::dealing::Opening<P>::role(&self) -> coupery_ksnf::dealing::RoleId
+pub const fn coupery_ksnf::dealing::Opening<P>::salt(&self) -> coupery_ksnf::algebra::ScalarFor<P>
+pub fn coupery_ksnf::dealing::Opening<P>::to_bytes(&self) -> coupery_ksnf::error::Result<alloc::vec::Vec<u8>>
+impl<P: coupery_ksnf::profile::Profile> core::fmt::Debug for coupery_ksnf::dealing::Opening<P>
+pub fn coupery_ksnf::dealing::Opening<P>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub struct coupery_ksnf::dealing::OuterShape<P: coupery_ksnf::profile::Profile>
+impl<P: coupery_ksnf::profile::Profile> coupery_ksnf::dealing::OuterShape<P>
+pub fn coupery_ksnf::dealing::OuterShape<P>::new(u16, alloc::vec::Vec<coupery_ksnf::dealing::OuterTarget<P>>) -> coupery_ksnf::error::Result<Self>
+pub fn coupery_ksnf::dealing::OuterShape<P>::people(&self) -> &[coupery_ksnf::dealing::OuterTarget<P>]
+pub const fn coupery_ksnf::dealing::OuterShape<P>::threshold(&self) -> u16
+pub struct coupery_ksnf::dealing::OuterTarget<P: coupery_ksnf::profile::Profile>
+impl<P: coupery_ksnf::profile::Profile> coupery_ksnf::dealing::OuterTarget<P>
+pub const fn coupery_ksnf::dealing::OuterTarget<P>::inner(&self) -> &coupery_ksnf::dealing::SingleShape<P>
+pub const fn coupery_ksnf::dealing::OuterTarget<P>::new(coupery_ksnf::types::PersonId, coupery_ksnf::shamir::Node<P>, coupery_ksnf::dealing::SingleShape<P>) -> Self
+pub const fn coupery_ksnf::dealing::OuterTarget<P>::node(&self) -> coupery_ksnf::shamir::Node<P>
+pub const fn coupery_ksnf::dealing::OuterTarget<P>::person(&self) -> coupery_ksnf::types::PersonId
+pub struct coupery_ksnf::dealing::PendingShare<P: coupery_ksnf::profile::Profile>
+impl<P: coupery_ksnf::profile::Profile> coupery_ksnf::dealing::PendingShare<P>
+pub fn coupery_ksnf::dealing::PendingShare<P>::resolve(self, coupery_ksnf::log_act::Terminal) -> coupery_ksnf::error::Result<core::option::Option<coupery_ksnf::dealing::InstalledShare<P>>>
+pub const fn coupery_ksnf::dealing::PendingShare<P>::target(&self) -> coupery_ksnf::dealing::TargetId
+pub struct coupery_ksnf::dealing::PrivateShare<P: coupery_ksnf::profile::Profile>
+impl<P: coupery_ksnf::profile::Profile> coupery_ksnf::dealing::PrivateShare<P>
+pub const fn coupery_ksnf::dealing::PrivateShare<P>::command(&self) -> coupery_ksnf::types::CommandId
+pub fn coupery_ksnf::dealing::PrivateShare<P>::expose<T>(&self, impl core::ops::function::FnOnce(&coupery_ksnf::algebra::ScalarFor<P>) -> T) -> T
+pub fn coupery_ksnf::dealing::PrivateShare<P>::new(coupery_ksnf::types::CommandId, coupery_ksnf::dealing::RoleId, coupery_ksnf::dealing::TargetId, coupery_ksnf::algebra::SecretScalar<P>) -> Self
+pub const fn coupery_ksnf::dealing::PrivateShare<P>::role(&self) -> coupery_ksnf::dealing::RoleId
+pub const fn coupery_ksnf::dealing::PrivateShare<P>::target(&self) -> coupery_ksnf::dealing::TargetId
+impl<P: coupery_ksnf::profile::Profile> core::fmt::Debug for coupery_ksnf::dealing::PrivateShare<P>
+pub fn coupery_ksnf::dealing::PrivateShare<P>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl<P: coupery_ksnf::profile::Profile> core::ops::drop::Drop for coupery_ksnf::dealing::PrivateShare<P>
+pub fn coupery_ksnf::dealing::PrivateShare<P>::drop(&mut self)
+pub struct coupery_ksnf::dealing::ReleasedContribution<'a, P: coupery_ksnf::profile::Profile>
+impl<'a, P: coupery_ksnf::profile::Profile> coupery_ksnf::dealing::ReleasedContribution<'a, P>
+pub fn coupery_ksnf::dealing::ReleasedContribution<'a, P>::opening(&self) -> coupery_ksnf::dealing::Opening<P>
+pub fn coupery_ksnf::dealing::ReleasedContribution<'a, P>::share(&self, &coupery_ksnf::dealing::Command<P>, coupery_ksnf::dealing::TargetId) -> coupery_ksnf::error::Result<coupery_ksnf::dealing::PrivateShare<P>>
+pub struct coupery_ksnf::dealing::RoleSpec<P: coupery_ksnf::profile::Profile>
+impl<P: coupery_ksnf::profile::Profile> coupery_ksnf::dealing::RoleSpec<P>
+pub const fn coupery_ksnf::dealing::RoleSpec<P>::constant(self) -> coupery_ksnf::algebra::Element<P>
+pub fn coupery_ksnf::dealing::RoleSpec<P>::refresher(coupery_ksnf::types::DeviceId) -> Self
+pub const fn coupery_ksnf::dealing::RoleSpec<P>::role(self) -> coupery_ksnf::dealing::RoleId
+pub fn coupery_ksnf::dealing::RoleSpec<P>::source(coupery_ksnf::types::DeviceId, coupery_ksnf::keys::SharePoint<P>, coupery_ksnf::support::SourceWeight<P>) -> coupery_ksnf::error::Result<Self>
+pub struct coupery_ksnf::dealing::SingleShape<P: coupery_ksnf::profile::Profile>
+impl<P: coupery_ksnf::profile::Profile> coupery_ksnf::dealing::SingleShape<P>
+pub fn coupery_ksnf::dealing::SingleShape<P>::devices(&self) -> &[coupery_ksnf::dealing::TargetDevice<P>]
+pub fn coupery_ksnf::dealing::SingleShape<P>::new(u16, alloc::vec::Vec<coupery_ksnf::dealing::TargetDevice<P>>) -> coupery_ksnf::error::Result<Self>
+pub const fn coupery_ksnf::dealing::SingleShape<P>::threshold(&self) -> u16
+pub struct coupery_ksnf::dealing::TargetAccumulator<P: coupery_ksnf::profile::Profile>
+impl<P: coupery_ksnf::profile::Profile> coupery_ksnf::dealing::TargetAccumulator<P>
+pub fn coupery_ksnf::dealing::TargetAccumulator<P>::finish(self) -> coupery_ksnf::error::Result<coupery_ksnf::dealing::TargetReady<P>>
+pub fn coupery_ksnf::dealing::TargetAccumulator<P>::new(coupery_ksnf::dealing::CandidateView<P>, coupery_ksnf::dealing::TargetId) -> coupery_ksnf::error::Result<Self>
+pub fn coupery_ksnf::dealing::TargetAccumulator<P>::receive(&mut self, coupery_ksnf::dealing::PrivateShare<P>) -> coupery_ksnf::error::Result<()>
+pub struct coupery_ksnf::dealing::TargetDevice<P: coupery_ksnf::profile::Profile>
+impl<P: coupery_ksnf::profile::Profile> coupery_ksnf::dealing::TargetDevice<P>
+pub const fn coupery_ksnf::dealing::TargetDevice<P>::device(self) -> coupery_ksnf::types::DeviceId
+pub const fn coupery_ksnf::dealing::TargetDevice<P>::new(coupery_ksnf::types::DeviceId, coupery_ksnf::shamir::Node<P>) -> Self
+pub const fn coupery_ksnf::dealing::TargetDevice<P>::node(self) -> coupery_ksnf::shamir::Node<P>
+pub struct coupery_ksnf::dealing::TargetReady<P: coupery_ksnf::profile::Profile>
+impl<P: coupery_ksnf::profile::Profile> coupery_ksnf::dealing::TargetReady<P>
+pub fn coupery_ksnf::dealing::TargetReady<P>::into_parts(self) -> (coupery_ksnf::dealing::TargetReceipt<P>, coupery_ksnf::dealing::PendingShare<P>)
+pub struct coupery_ksnf::dealing::TargetReceipt<P: coupery_ksnf::profile::Profile>
+impl<P: coupery_ksnf::profile::Profile> coupery_ksnf::dealing::TargetReceipt<P>
+pub const fn coupery_ksnf::dealing::TargetReceipt<P>::command(&self) -> coupery_ksnf::types::CommandId
+pub fn coupery_ksnf::dealing::TargetReceipt<P>::from_bytes(&[u8]) -> coupery_ksnf::error::Result<Self>
+pub const fn coupery_ksnf::dealing::TargetReceipt<P>::new(coupery_ksnf::types::CommandId, coupery_ksnf::dealing::TargetId, alloc::vec::Vec<u8>) -> Self
+pub const fn coupery_ksnf::dealing::TargetReceipt<P>::target(&self) -> coupery_ksnf::dealing::TargetId
+pub fn coupery_ksnf::dealing::TargetReceipt<P>::to_bytes(&self) -> coupery_ksnf::error::Result<alloc::vec::Vec<u8>>
+pub fn coupery_ksnf::dealing::TargetReceipt<P>::view(&self) -> &[u8]
+pub mod coupery_ksnf::error
+#[non_exhaustive] pub enum coupery_ksnf::error::Error
+pub coupery_ksnf::error::Error::AlreadyTerminal
+pub coupery_ksnf::error::Error::AttemptClosed
+pub coupery_ksnf::error::Error::AttemptExhausted
+pub coupery_ksnf::error::Error::AttemptMismatch
+pub coupery_ksnf::error::Error::Busy
+pub coupery_ksnf::error::Error::CoefficientMismatch
+pub coupery_ksnf::error::Error::CommandMismatch
+pub coupery_ksnf::error::Error::CommitmentMismatch
+pub coupery_ksnf::error::Error::DuplicateNode
+pub coupery_ksnf::error::Error::DuplicateParticipant
+pub coupery_ksnf::error::Error::DuplicateSlot
+pub coupery_ksnf::error::Error::EmptyInput
+pub coupery_ksnf::error::Error::EpochMismatch
+pub coupery_ksnf::error::Error::Expired
+pub coupery_ksnf::error::Error::HashToField
+pub coupery_ksnf::error::Error::IdentityNonce
+pub coupery_ksnf::error::Error::IdentityPoint
+pub coupery_ksnf::error::Error::InvalidElementTag
+pub coupery_ksnf::error::Error::InvalidIdentity
+pub coupery_ksnf::error::Error::InvalidPartial
+pub coupery_ksnf::error::Error::InvalidPoint
+pub coupery_ksnf::error::Error::InvalidScalar
+pub coupery_ksnf::error::Error::InvalidSighash
+pub coupery_ksnf::error::Error::InvalidSignature
+pub coupery_ksnf::error::Error::InvalidTranscript
+pub coupery_ksnf::error::Error::InvalidTweak
+pub coupery_ksnf::error::Error::LengthMismatch
+pub coupery_ksnf::error::Error::LengthOverflow
+pub coupery_ksnf::error::Error::NonceMismatch
+pub coupery_ksnf::error::Error::OutputKeyMismatch
+pub coupery_ksnf::error::Error::ParticipantMismatch
+pub coupery_ksnf::error::Error::ParticipantNotFound
+pub coupery_ksnf::error::Error::PhaseClosed
+pub coupery_ksnf::error::Error::ProtocolMismatch
+pub coupery_ksnf::error::Error::ReceiverMismatch
+pub coupery_ksnf::error::Error::ReplayMismatch
+pub coupery_ksnf::error::Error::ShareMismatch
+pub coupery_ksnf::error::Error::StalePredecessor
+pub coupery_ksnf::error::Error::SupportMismatch
+pub coupery_ksnf::error::Error::TrailingBytes
+pub coupery_ksnf::error::Error::TrailingBytes::offset: usize
+pub coupery_ksnf::error::Error::UnexpectedEnd
+pub coupery_ksnf::error::Error::UnexpectedEnd::needed: usize
+pub coupery_ksnf::error::Error::UnexpectedEnd::offset: usize
+pub coupery_ksnf::error::Error::UnsupportedVersion
+pub coupery_ksnf::error::Error::WrongStage
+pub coupery_ksnf::error::Error::ZeroNode
+pub coupery_ksnf::error::Error::ZeroNonce
+impl coupery_ksnf::error::Error
+pub const fn coupery_ksnf::error::Error::code(self) -> &'static str
+impl core::error::Error for coupery_ksnf::error::Error
+impl core::fmt::Display for coupery_ksnf::error::Error
+pub fn coupery_ksnf::error::Error::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl<E> core::convert::From<coupery_ksnf::error::Error> for coupery_ksnf::leaf::PersistError<E>
+pub fn coupery_ksnf::leaf::PersistError<E>::from(coupery_ksnf::error::Error) -> Self
+pub type coupery_ksnf::error::Result<T> = core::result::Result<T, coupery_ksnf::error::Error>
+pub mod coupery_ksnf::exposure
+pub enum coupery_ksnf::exposure::ExposureViolation
+pub coupery_ksnf::exposure::ExposureViolation::ActivatedEpoch
+pub coupery_ksnf::exposure::ExposureViolation::ActivatedEpoch::controlled: usize
+pub coupery_ksnf::exposure::ExposureViolation::ActivatedEpoch::epoch: coupery_ksnf::types::OuterEpoch
+pub coupery_ksnf::exposure::ExposureViolation::ActivatedEpoch::limit: usize
+pub coupery_ksnf::exposure::ExposureViolation::ActivatedEpoch::vault: coupery_ksnf::types::VaultId
+pub coupery_ksnf::exposure::ExposureViolation::MemberCandidate
+pub coupery_ksnf::exposure::ExposureViolation::MemberCandidate::command: coupery_ksnf::types::CommandId
+pub coupery_ksnf::exposure::ExposureViolation::MemberCandidate::person: coupery_ksnf::types::PersonId
+pub coupery_ksnf::exposure::ExposureViolation::OuterCandidate
+pub coupery_ksnf::exposure::ExposureViolation::OuterCandidate::command: coupery_ksnf::types::CommandId
+pub coupery_ksnf::exposure::ExposureViolation::OuterCandidate::controlled: usize
+pub coupery_ksnf::exposure::ExposureViolation::OuterCandidate::limit: usize
+pub struct coupery_ksnf::exposure::ExposureLedger
+impl coupery_ksnf::exposure::ExposureLedger
+pub fn coupery_ksnf::exposure::ExposureLedger::audit(&self) -> alloc::vec::Vec<coupery_ksnf::exposure::ExposureViolation>
+pub fn coupery_ksnf::exposure::ExposureLedger::expose_member_candidate(&mut self, coupery_ksnf::types::CommandId, coupery_ksnf::types::BlockId, &coupery_ksnf::exposure::TargetGroup) -> coupery_ksnf::error::Result<()>
+pub fn coupery_ksnf::exposure::ExposureLedger::expose_outer_candidate(&mut self, coupery_ksnf::types::CommandId, u16, &[coupery_ksnf::exposure::TargetGroup]) -> coupery_ksnf::error::Result<()>
+pub fn coupery_ksnf::exposure::ExposureLedger::new(impl core::iter::traits::collect::IntoIterator<Item = coupery_ksnf::types::DeviceId>) -> Self
+pub fn coupery_ksnf::exposure::ExposureLedger::register_epoch(&mut self, coupery_ksnf::types::VaultId, coupery_ksnf::types::OuterEpoch, u16, alloc::vec::Vec<coupery_ksnf::exposure::MemberBlockSpec>) -> coupery_ksnf::error::Result<()>
+pub fn coupery_ksnf::exposure::ExposureLedger::reveal(&mut self, coupery_ksnf::types::BlockId, coupery_ksnf::types::DeviceId) -> coupery_ksnf::error::Result<()>
+pub struct coupery_ksnf::exposure::MemberBlockSpec
+impl coupery_ksnf::exposure::MemberBlockSpec
+pub const fn coupery_ksnf::exposure::MemberBlockSpec::block(&self) -> coupery_ksnf::types::BlockId
+pub fn coupery_ksnf::exposure::MemberBlockSpec::new(coupery_ksnf::types::BlockId, coupery_ksnf::types::PersonId, u16, alloc::vec::Vec<coupery_ksnf::types::DeviceId>) -> coupery_ksnf::error::Result<Self>
+pub const fn coupery_ksnf::exposure::MemberBlockSpec::person(&self) -> coupery_ksnf::types::PersonId
+pub struct coupery_ksnf::exposure::TargetGroup
+impl coupery_ksnf::exposure::TargetGroup
+pub fn coupery_ksnf::exposure::TargetGroup::new(coupery_ksnf::types::PersonId, u16, alloc::vec::Vec<coupery_ksnf::types::DeviceId>) -> coupery_ksnf::error::Result<Self>
+pub const fn coupery_ksnf::exposure::TargetGroup::person(&self) -> coupery_ksnf::types::PersonId
+pub mod coupery_ksnf::genesis
+pub struct coupery_ksnf::genesis::DeviceGenesis<P: coupery_ksnf::profile::Profile>
+impl<P: coupery_ksnf::profile::Profile> coupery_ksnf::genesis::DeviceGenesis<P>
+pub const fn coupery_ksnf::genesis::DeviceGenesis<P>::device(&self) -> coupery_ksnf::types::DeviceId
+pub const fn coupery_ksnf::genesis::DeviceGenesis<P>::identity_key(&self) -> coupery_ksnf::keys::IdentityKey<P>
+pub const fn coupery_ksnf::genesis::DeviceGenesis<P>::member_point(&self) -> coupery_ksnf::keys::MemberPoint<P>
+pub const fn coupery_ksnf::genesis::DeviceGenesis<P>::person(&self) -> coupery_ksnf::types::PersonId
+pub const fn coupery_ksnf::genesis::DeviceGenesis<P>::vault(&self) -> coupery_ksnf::types::VaultId
+pub const fn coupery_ksnf::genesis::DeviceGenesis<P>::vault_key(&self) -> coupery_ksnf::keys::VaultKey<P>
+impl<P: coupery_ksnf::profile::Profile> core::fmt::Debug for coupery_ksnf::genesis::DeviceGenesis<P>
+pub fn coupery_ksnf::genesis::DeviceGenesis<P>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub struct coupery_ksnf::genesis::PublicDevice<P: coupery_ksnf::profile::Profile>
+impl<P: coupery_ksnf::profile::Profile> coupery_ksnf::genesis::PublicDevice<P>
+pub const fn coupery_ksnf::genesis::PublicDevice<P>::new(coupery_ksnf::types::DeviceId, coupery_ksnf::shamir::Node<P>, coupery_ksnf::keys::SharePoint<P>, coupery_ksnf::keys::SharePoint<P>) -> Self
+pub struct coupery_ksnf::genesis::PublicPerson<P: coupery_ksnf::profile::Profile>
+impl<P: coupery_ksnf::profile::Profile> coupery_ksnf::genesis::PublicPerson<P>
+pub const fn coupery_ksnf::genesis::PublicPerson<P>::identity_key(&self) -> coupery_ksnf::keys::IdentityKey<P>
+pub const fn coupery_ksnf::genesis::PublicPerson<P>::member_point(&self) -> coupery_ksnf::keys::MemberPoint<P>
+pub fn coupery_ksnf::genesis::PublicPerson<P>::new(coupery_ksnf::types::PersonId, coupery_ksnf::shamir::Node<P>, coupery_ksnf::genesis::PublicPolynomial<P>, coupery_ksnf::genesis::PublicPolynomial<P>, alloc::vec::Vec<coupery_ksnf::genesis::PublicDevice<P>>) -> coupery_ksnf::error::Result<Self>
+pub struct coupery_ksnf::genesis::PublicPolynomial<P: coupery_ksnf::profile::Profile>
+impl<P: coupery_ksnf::profile::Profile> coupery_ksnf::genesis::PublicPolynomial<P>
+pub fn coupery_ksnf::genesis::PublicPolynomial<P>::new(alloc::vec::Vec<coupery_ksnf::algebra::Element<P>>) -> coupery_ksnf::error::Result<Self>
+pub fn coupery_ksnf::genesis::PublicPolynomial<P>::threshold(&self) -> usize
+pub struct coupery_ksnf::genesis::ValidatedPublicGenesis<P: coupery_ksnf::profile::Profile>
+impl<P: coupery_ksnf::profile::Profile> coupery_ksnf::genesis::ValidatedPublicGenesis<P>
+pub fn coupery_ksnf::genesis::ValidatedPublicGenesis<P>::attach_share(&self, coupery_ksnf::types::PersonId, coupery_ksnf::types::DeviceId, coupery_ksnf::algebra::SecretScalar<P>, coupery_ksnf::algebra::SecretScalar<P>) -> coupery_ksnf::error::Result<coupery_ksnf::genesis::DeviceGenesis<P>>
+pub fn coupery_ksnf::genesis::ValidatedPublicGenesis<P>::inner_support(&self, coupery_ksnf::types::PersonId, &[coupery_ksnf::types::DeviceId]) -> coupery_ksnf::error::Result<coupery_ksnf::support::InnerSupport<P>>
+pub fn coupery_ksnf::genesis::ValidatedPublicGenesis<P>::outer_support(&self, &[coupery_ksnf::types::PersonId]) -> coupery_ksnf::error::Result<coupery_ksnf::support::OuterSupport<P>>
+pub fn coupery_ksnf::genesis::ValidatedPublicGenesis<P>::person(&self, coupery_ksnf::types::PersonId) -> coupery_ksnf::error::Result<&coupery_ksnf::genesis::PublicPerson<P>>
+pub fn coupery_ksnf::genesis::ValidatedPublicGenesis<P>::threshold(&self) -> usize
+pub fn coupery_ksnf::genesis::ValidatedPublicGenesis<P>::validate(coupery_ksnf::types::VaultId, coupery_ksnf::genesis::PublicPolynomial<P>, alloc::vec::Vec<coupery_ksnf::genesis::PublicPerson<P>>) -> coupery_ksnf::error::Result<Self>
+pub const fn coupery_ksnf::genesis::ValidatedPublicGenesis<P>::vault(&self) -> coupery_ksnf::types::VaultId
+pub const fn coupery_ksnf::genesis::ValidatedPublicGenesis<P>::vault_key(&self) -> coupery_ksnf::keys::VaultKey<P>
+pub mod coupery_ksnf::keys
+pub struct coupery_ksnf::keys::AnchorId
+impl coupery_ksnf::keys::AnchorId
+pub const fn coupery_ksnf::keys::AnchorId::identity(self) -> coupery_ksnf::types::ActivationHandle
+pub const fn coupery_ksnf::keys::AnchorId::member(self) -> coupery_ksnf::types::ActivationHandle
+pub const fn coupery_ksnf::keys::AnchorId::new(coupery_ksnf::types::VaultId, coupery_ksnf::types::PersonId, coupery_ksnf::types::ActivationHandle, coupery_ksnf::types::ActivationHandle) -> Self
+pub const fn coupery_ksnf::keys::AnchorId::person(self) -> coupery_ksnf::types::PersonId
+pub const fn coupery_ksnf::keys::AnchorId::vault(self) -> coupery_ksnf::types::VaultId
+pub struct coupery_ksnf::keys::IdentityKey<P: coupery_ksnf::profile::Profile>(_)
+impl<P: coupery_ksnf::profile::Profile> coupery_ksnf::keys::IdentityKey<P>
+pub fn coupery_ksnf::keys::IdentityKey<P>::from_bytes(&[u8]) -> coupery_ksnf::error::Result<Self>
+pub const fn coupery_ksnf::keys::IdentityKey<P>::new(coupery_ksnf::algebra::Point<P>) -> Self
+pub const fn coupery_ksnf::keys::IdentityKey<P>::point(self) -> coupery_ksnf::algebra::Point<P>
+pub fn coupery_ksnf::keys::IdentityKey<P>::to_bytes(self) -> coupery_ksnf::profile::PointBytes<P>
+impl<P: coupery_ksnf::profile::Profile> core::fmt::Debug for coupery_ksnf::keys::IdentityKey<P>
+pub fn coupery_ksnf::keys::IdentityKey<P>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub struct coupery_ksnf::keys::KeyEpoch
+impl coupery_ksnf::keys::KeyEpoch
+pub const fn coupery_ksnf::keys::KeyEpoch::anchor(self) -> coupery_ksnf::keys::AnchorId
+pub const fn coupery_ksnf::keys::KeyEpoch::inner(self) -> coupery_ksnf::types::InnerEpoch
+pub const fn coupery_ksnf::keys::KeyEpoch::new(coupery_ksnf::types::OuterEpoch, coupery_ksnf::types::InnerEpoch, coupery_ksnf::keys::AnchorId) -> Self
+pub const fn coupery_ksnf::keys::KeyEpoch::outer(self) -> coupery_ksnf::types::OuterEpoch
+pub struct coupery_ksnf::keys::MemberPoint<P: coupery_ksnf::profile::Profile>(_)
+impl<P: coupery_ksnf::profile::Profile> coupery_ksnf::keys::MemberPoint<P>
+pub fn coupery_ksnf::keys::MemberPoint<P>::from_bytes(&[u8]) -> coupery_ksnf::error::Result<Self>
+pub const fn coupery_ksnf::keys::MemberPoint<P>::new(coupery_ksnf::algebra::Point<P>) -> Self
+pub const fn coupery_ksnf::keys::MemberPoint<P>::point(self) -> coupery_ksnf::algebra::Point<P>
+pub fn coupery_ksnf::keys::MemberPoint<P>::to_bytes(self) -> coupery_ksnf::profile::PointBytes<P>
+impl<P: coupery_ksnf::profile::Profile> core::fmt::Debug for coupery_ksnf::keys::MemberPoint<P>
+pub fn coupery_ksnf::keys::MemberPoint<P>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub struct coupery_ksnf::keys::SharePoint<P: coupery_ksnf::profile::Profile>(_)
+impl<P: coupery_ksnf::profile::Profile> coupery_ksnf::keys::SharePoint<P>
+pub const fn coupery_ksnf::keys::SharePoint<P>::element(self) -> coupery_ksnf::algebra::Element<P>
+pub fn coupery_ksnf::keys::SharePoint<P>::new(impl core::convert::Into<coupery_ksnf::algebra::Element<P>>) -> Self
+pub struct coupery_ksnf::keys::VaultKey<P: coupery_ksnf::profile::Profile>(_)
+impl<P: coupery_ksnf::profile::Profile> coupery_ksnf::keys::VaultKey<P>
+pub fn coupery_ksnf::keys::VaultKey<P>::from_bytes(&[u8]) -> coupery_ksnf::error::Result<Self>
+pub const fn coupery_ksnf::keys::VaultKey<P>::new(coupery_ksnf::algebra::Point<P>) -> Self
+pub const fn coupery_ksnf::keys::VaultKey<P>::point(self) -> coupery_ksnf::algebra::Point<P>
+pub fn coupery_ksnf::keys::VaultKey<P>::to_bytes(self) -> coupery_ksnf::profile::PointBytes<P>
+impl<P: coupery_ksnf::profile::Profile> core::fmt::Debug for coupery_ksnf::keys::VaultKey<P>
+pub fn coupery_ksnf::keys::VaultKey<P>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn coupery_ksnf::keys::anchor_share<P: coupery_ksnf::profile::Profile>(&coupery_ksnf::algebra::SecretScalar<P>, &coupery_ksnf::algebra::SecretScalar<P>) -> coupery_ksnf::algebra::SecretScalar<P>
+pub fn coupery_ksnf::keys::signing_share<P: coupery_ksnf::profile::Profile>(&coupery_ksnf::algebra::SecretScalar<P>, &coupery_ksnf::algebra::SecretScalar<P>) -> coupery_ksnf::algebra::SecretScalar<P>
+pub fn coupery_ksnf::keys::verify_anchor<P: coupery_ksnf::profile::Profile>(coupery_ksnf::keys::SharePoint<P>, coupery_ksnf::algebra::Element<P>, coupery_ksnf::keys::SharePoint<P>) -> bool
+pub mod coupery_ksnf::leaf
+pub enum coupery_ksnf::leaf::JournalCas
+pub coupery_ksnf::leaf::JournalCas::Applied(coupery_ksnf::leaf::JournalRevision)
+pub coupery_ksnf::leaf::JournalCas::Conflict
+pub enum coupery_ksnf::leaf::LeafStage
+pub coupery_ksnf::leaf::LeafStage::Committed
+pub coupery_ksnf::leaf::LeafStage::Fixed
+pub coupery_ksnf::leaf::LeafStage::Held
+pub coupery_ksnf::leaf::LeafStage::Reserved
+#[non_exhaustive] pub enum coupery_ksnf::leaf::PersistError<E>
+pub coupery_ksnf::leaf::PersistError::Conflict
+pub coupery_ksnf::leaf::PersistError::InvalidRecord(coupery_ksnf::error::Error)
+pub coupery_ksnf::leaf::PersistError::MissingMaterial(coupery_ksnf::leaf::MaterialId)
+pub coupery_ksnf::leaf::PersistError::Protocol(coupery_ksnf::error::Error)
+pub coupery_ksnf::leaf::PersistError::Reconcile
+pub coupery_ksnf::leaf::PersistError::Store(E)
+pub coupery_ksnf::leaf::PersistError::Unavailable
+impl<E: core::error::Error + 'static> core::error::Error for coupery_ksnf::leaf::PersistError<E>
+pub fn coupery_ksnf::leaf::PersistError<E>::source(&self) -> core::option::Option<&(dyn core::error::Error + 'static)>
+impl<E: core::fmt::Display> core::fmt::Display for coupery_ksnf::leaf::PersistError<E>
+pub fn coupery_ksnf::leaf::PersistError<E>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl<E> core::convert::From<coupery_ksnf::error::Error> for coupery_ksnf::leaf::PersistError<E>
+pub fn coupery_ksnf::leaf::PersistError<E>::from(coupery_ksnf::error::Error) -> Self
+pub struct coupery_ksnf::leaf::JournalRevision(_)
+impl coupery_ksnf::leaf::JournalRevision
+pub const fn coupery_ksnf::leaf::JournalRevision::get(self) -> u64
+pub const fn coupery_ksnf::leaf::JournalRevision::new(u64) -> Self
+pub struct coupery_ksnf::leaf::LeafJournal<P: coupery_ksnf::profile::Profile>
+impl<P: coupery_ksnf::profile::Profile> coupery_ksnf::leaf::LeafJournal<P>
+pub const fn coupery_ksnf::leaf::LeafJournal<P>::device(&self) -> coupery_ksnf::types::DeviceId
+pub fn coupery_ksnf::leaf::LeafJournal<P>::from_bytes(&[u8]) -> coupery_ksnf::error::Result<Self>
+pub fn coupery_ksnf::leaf::LeafJournal<P>::is_closed(&self, coupery_ksnf::types::LeafAttempt) -> bool
+pub const fn coupery_ksnf::leaf::LeafJournal<P>::live_attempt(&self) -> core::option::Option<coupery_ksnf::types::LeafAttempt>
+pub const fn coupery_ksnf::leaf::LeafJournal<P>::material(&self) -> coupery_ksnf::leaf::MaterialId
+pub fn coupery_ksnf::leaf::LeafJournal<P>::new(coupery_ksnf::types::DeviceId, coupery_ksnf::leaf::MaterialId, u64, core::option::Option<coupery_ksnf::types::LeafAttempt>) -> coupery_ksnf::error::Result<Self>
+pub const fn coupery_ksnf::leaf::LeafJournal<P>::next_sequence(&self) -> u64
+pub fn coupery_ksnf::leaf::LeafJournal<P>::to_bytes(&self) -> [u8; 89]
+pub struct coupery_ksnf::leaf::LeafMaterial<P: coupery_ksnf::profile::Profile>
+impl<P: coupery_ksnf::profile::Profile> coupery_ksnf::leaf::LeafMaterial<P>
+pub fn coupery_ksnf::leaf::LeafMaterial<P>::as_bytes(&self) -> &[u8]
+pub fn coupery_ksnf::leaf::LeafMaterial<P>::from_bytes(alloc::vec::Vec<u8>) -> coupery_ksnf::error::Result<Self>
+pub const fn coupery_ksnf::leaf::LeafMaterial<P>::id(&self) -> coupery_ksnf::leaf::MaterialId
+impl<P: coupery_ksnf::profile::Profile> core::fmt::Debug for coupery_ksnf::leaf::LeafMaterial<P>
+pub fn coupery_ksnf::leaf::LeafMaterial<P>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub struct coupery_ksnf::leaf::LeafRegistry<P: coupery_ksnf::profile::Profile>
+impl<P: coupery_ksnf::profile::Profile> coupery_ksnf::leaf::LeafRegistry<P>
+pub fn coupery_ksnf::leaf::LeafRegistry<P>::activate_inner(&mut self, coupery_ksnf::keys::KeyEpoch, coupery_ksnf::dealing::InstalledShare<P>, coupery_ksnf::dealing::InstalledShare<P>) -> coupery_ksnf::error::Result<()>
+pub fn coupery_ksnf::leaf::LeafRegistry<P>::activate_inner_bundle(&mut self, coupery_ksnf::dealing::InstalledShare<P>, alloc::vec::Vec<(coupery_ksnf::keys::KeyEpoch, coupery_ksnf::dealing::InstalledShare<P>)>) -> coupery_ksnf::error::Result<()>
+pub fn coupery_ksnf::leaf::LeafRegistry<P>::activate_outer(&mut self, coupery_ksnf::keys::KeyEpoch, coupery_ksnf::dealing::InstalledShare<P>) -> coupery_ksnf::error::Result<()>
+pub fn coupery_ksnf::leaf::LeafRegistry<P>::add_vault(&mut self, coupery_ksnf::genesis::DeviceGenesis<P>, coupery_ksnf::keys::KeyEpoch) -> coupery_ksnf::error::Result<()>
+pub fn coupery_ksnf::leaf::LeafRegistry<P>::close(&mut self, coupery_ksnf::types::LeafAttempt) -> coupery_ksnf::error::Result<()>
+pub fn coupery_ksnf::leaf::LeafRegistry<P>::close_expired(&mut self, u64) -> core::option::Option<coupery_ksnf::types::LeafAttempt>
+pub fn coupery_ksnf::leaf::LeafRegistry<P>::commit(&mut self, coupery_ksnf::types::LeafAttempt, &[u8], &mut impl rand_core::CryptoRng + rand_core::RngCore) -> coupery_ksnf::error::Result<coupery_ksnf::algebra::ScalarFor<P>>
+pub fn coupery_ksnf::leaf::LeafRegistry<P>::epoch(&self, coupery_ksnf::types::VaultId) -> coupery_ksnf::error::Result<coupery_ksnf::keys::KeyEpoch>
+pub fn coupery_ksnf::leaf::LeafRegistry<P>::fix(&mut self, coupery_ksnf::types::LeafAttempt, alloc::vec::Vec<coupery_ksnf::auth::AuthenticatedOpening<P>>) -> coupery_ksnf::error::Result<coupery_ksnf::signing::NoncePair<P>>
+pub fn coupery_ksnf::leaf::LeafRegistry<P>::from_vaults(alloc::vec::Vec<(coupery_ksnf::genesis::DeviceGenesis<P>, coupery_ksnf::keys::KeyEpoch)>) -> coupery_ksnf::error::Result<Self>
+pub fn coupery_ksnf::leaf::LeafRegistry<P>::is_closed(&self, coupery_ksnf::types::LeafAttempt) -> bool
+pub fn coupery_ksnf::leaf::LeafRegistry<P>::live_attempt(&self) -> core::option::Option<coupery_ksnf::types::LeafAttempt>
+pub fn coupery_ksnf::leaf::LeafRegistry<P>::live_session(&self) -> core::option::Option<coupery_ksnf::types::SessionId>
+pub fn coupery_ksnf::leaf::LeafRegistry<P>::new(coupery_ksnf::genesis::DeviceGenesis<P>, coupery_ksnf::keys::KeyEpoch) -> coupery_ksnf::error::Result<Self>
+pub const fn coupery_ksnf::leaf::LeafRegistry<P>::next_sequence(&self) -> u64
+pub fn coupery_ksnf::leaf::LeafRegistry<P>::receive_abort(&mut self, &coupery_ksnf::auth::AuthenticatedAbort) -> coupery_ksnf::error::Result<()>
+pub fn coupery_ksnf::leaf::LeafRegistry<P>::reserve(&mut self, coupery_ksnf::types::SessionId, u64, &[u8], &coupery_ksnf::support::OuterSupport<P>) -> coupery_ksnf::error::Result<coupery_ksnf::types::LeafAttempt>
+pub fn coupery_ksnf::leaf::LeafRegistry<P>::respond(&mut self, coupery_ksnf::types::LeafAttempt, &[u8]) -> coupery_ksnf::error::Result<coupery_ksnf::signing::DeviceResponse<P>>
+pub fn coupery_ksnf::leaf::LeafRegistry<P>::reveal(&mut self, coupery_ksnf::types::LeafAttempt, alloc::vec::Vec<coupery_ksnf::auth::AuthenticatedCommitment<P>>) -> coupery_ksnf::error::Result<coupery_ksnf::signing::NoncePair<P>>
+pub fn coupery_ksnf::leaf::LeafRegistry<P>::stage(&self) -> core::option::Option<coupery_ksnf::leaf::LeafStage>
+pub fn coupery_ksnf::leaf::LeafRegistry<P>::vaults(&self) -> impl core::iter::traits::iterator::Iterator<Item = coupery_ksnf::types::VaultId> + '_
+pub struct coupery_ksnf::leaf::MaterialId(_)
+impl coupery_ksnf::leaf::MaterialId
+pub const fn coupery_ksnf::leaf::MaterialId::as_bytes(&self) -> &[u8; 32]
+pub const fn coupery_ksnf::leaf::MaterialId::new([u8; 32]) -> Self
+impl core::fmt::Debug for coupery_ksnf::leaf::MaterialId
+pub fn coupery_ksnf::leaf::MaterialId::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub struct coupery_ksnf::leaf::MemoryLeafStore<P: coupery_ksnf::profile::Profile>
+impl<P: coupery_ksnf::profile::Profile> coupery_ksnf::leaf::MemoryLeafStore<P>
+pub fn coupery_ksnf::leaf::MemoryLeafStore<P>::journal(&self, coupery_ksnf::types::DeviceId) -> core::option::Option<&coupery_ksnf::leaf::StoredJournal<P>>
+pub fn coupery_ksnf::leaf::MemoryLeafStore<P>::material_count(&self) -> usize
+impl<P: coupery_ksnf::profile::Profile> core::default::Default for coupery_ksnf::leaf::MemoryLeafStore<P>
+pub fn coupery_ksnf::leaf::MemoryLeafStore<P>::default() -> Self
+impl<P: coupery_ksnf::profile::Profile> coupery_ksnf::leaf::LeafStore<P> for coupery_ksnf::leaf::MemoryLeafStore<P>
+pub type coupery_ksnf::leaf::MemoryLeafStore<P>::Error = coupery_ksnf::error::Error
+pub fn coupery_ksnf::leaf::MemoryLeafStore<P>::compare_exchange_journal(&mut self, coupery_ksnf::types::DeviceId, core::option::Option<coupery_ksnf::leaf::JournalRevision>, &coupery_ksnf::leaf::LeafJournal<P>) -> coupery_ksnf::error::Result<coupery_ksnf::leaf::JournalCas>
+pub fn coupery_ksnf::leaf::MemoryLeafStore<P>::get_journal(&mut self, coupery_ksnf::types::DeviceId) -> coupery_ksnf::error::Result<core::option::Option<coupery_ksnf::leaf::StoredJournal<P>>>
+pub fn coupery_ksnf::leaf::MemoryLeafStore<P>::get_material(&mut self, coupery_ksnf::leaf::MaterialId) -> coupery_ksnf::error::Result<core::option::Option<coupery_ksnf::leaf::LeafMaterial<P>>>
+pub fn coupery_ksnf::leaf::MemoryLeafStore<P>::put_material(&mut self, &coupery_ksnf::leaf::LeafMaterial<P>) -> coupery_ksnf::error::Result<()>
+pub struct coupery_ksnf::leaf::PersistentLeaf<P: coupery_ksnf::profile::Profile>
+impl<P: coupery_ksnf::profile::Profile> coupery_ksnf::leaf::PersistentLeaf<P>
+pub fn coupery_ksnf::leaf::PersistentLeaf<P>::activate_inner<S: coupery_ksnf::leaf::LeafStore<P> + ?core::marker::Sized>(&mut self, &mut S, coupery_ksnf::keys::KeyEpoch, coupery_ksnf::dealing::InstalledShare<P>, coupery_ksnf::dealing::InstalledShare<P>) -> core::result::Result<(), coupery_ksnf::leaf::PersistError<<S as coupery_ksnf::leaf::LeafStore>::Error>>
+pub fn coupery_ksnf::leaf::PersistentLeaf<P>::activate_inner_bundle<S: coupery_ksnf::leaf::LeafStore<P> + ?core::marker::Sized>(&mut self, &mut S, coupery_ksnf::dealing::InstalledShare<P>, alloc::vec::Vec<(coupery_ksnf::keys::KeyEpoch, coupery_ksnf::dealing::InstalledShare<P>)>) -> core::result::Result<(), coupery_ksnf::leaf::PersistError<<S as coupery_ksnf::leaf::LeafStore>::Error>>
+pub fn coupery_ksnf::leaf::PersistentLeaf<P>::activate_outer<S: coupery_ksnf::leaf::LeafStore<P> + ?core::marker::Sized>(&mut self, &mut S, coupery_ksnf::keys::KeyEpoch, coupery_ksnf::dealing::InstalledShare<P>) -> core::result::Result<(), coupery_ksnf::leaf::PersistError<<S as coupery_ksnf::leaf::LeafStore>::Error>>
+pub fn coupery_ksnf::leaf::PersistentLeaf<P>::add_vault<S: coupery_ksnf::leaf::LeafStore<P> + ?core::marker::Sized>(&mut self, &mut S, coupery_ksnf::genesis::DeviceGenesis<P>, coupery_ksnf::keys::KeyEpoch) -> core::result::Result<(), coupery_ksnf::leaf::PersistError<<S as coupery_ksnf::leaf::LeafStore>::Error>>
+pub fn coupery_ksnf::leaf::PersistentLeaf<P>::close<S: coupery_ksnf::leaf::LeafStore<P> + ?core::marker::Sized>(&mut self, &mut S, coupery_ksnf::types::LeafAttempt) -> core::result::Result<(), coupery_ksnf::leaf::PersistError<<S as coupery_ksnf::leaf::LeafStore>::Error>>
+pub fn coupery_ksnf::leaf::PersistentLeaf<P>::close_expired<S: coupery_ksnf::leaf::LeafStore<P> + ?core::marker::Sized>(&mut self, &mut S, u64) -> core::result::Result<core::option::Option<coupery_ksnf::types::LeafAttempt>, coupery_ksnf::leaf::PersistError<<S as coupery_ksnf::leaf::LeafStore>::Error>>
+pub fn coupery_ksnf::leaf::PersistentLeaf<P>::commit<S: coupery_ksnf::leaf::LeafStore<P> + ?core::marker::Sized>(&mut self, &mut S, coupery_ksnf::types::LeafAttempt, &[u8], &mut impl rand_core::CryptoRng + rand_core::RngCore) -> core::result::Result<coupery_ksnf::algebra::ScalarFor<P>, coupery_ksnf::leaf::PersistError<<S as coupery_ksnf::leaf::LeafStore>::Error>>
+pub fn coupery_ksnf::leaf::PersistentLeaf<P>::create<S: coupery_ksnf::leaf::LeafStore<P> + ?core::marker::Sized>(&mut S, coupery_ksnf::leaf::LeafRegistry<P>) -> core::result::Result<Self, coupery_ksnf::leaf::PersistError<<S as coupery_ksnf::leaf::LeafStore>::Error>>
+pub const fn coupery_ksnf::leaf::PersistentLeaf<P>::device(&self) -> coupery_ksnf::types::DeviceId
+pub fn coupery_ksnf::leaf::PersistentLeaf<P>::fix<S: coupery_ksnf::leaf::LeafStore<P> + ?core::marker::Sized>(&mut self, &mut S, coupery_ksnf::types::LeafAttempt, alloc::vec::Vec<coupery_ksnf::auth::AuthenticatedOpening<P>>) -> core::result::Result<coupery_ksnf::signing::NoncePair<P>, coupery_ksnf::leaf::PersistError<<S as coupery_ksnf::leaf::LeafStore>::Error>>
+pub fn coupery_ksnf::leaf::PersistentLeaf<P>::load<S: coupery_ksnf::leaf::LeafStore<P> + ?core::marker::Sized>(&mut S, coupery_ksnf::types::DeviceId) -> core::result::Result<core::option::Option<Self>, coupery_ksnf::leaf::PersistError<<S as coupery_ksnf::leaf::LeafStore>::Error>>
+pub const fn coupery_ksnf::leaf::PersistentLeaf<P>::needs_reconcile(&self) -> bool
+pub fn coupery_ksnf::leaf::PersistentLeaf<P>::receive_abort<S: coupery_ksnf::leaf::LeafStore<P> + ?core::marker::Sized>(&mut self, &mut S, &coupery_ksnf::auth::AuthenticatedAbort) -> core::result::Result<(), coupery_ksnf::leaf::PersistError<<S as coupery_ksnf::leaf::LeafStore>::Error>>
+pub fn coupery_ksnf::leaf::PersistentLeaf<P>::reconcile<S: coupery_ksnf::leaf::LeafStore<P> + ?core::marker::Sized>(&mut self, &mut S) -> core::result::Result<(), coupery_ksnf::leaf::PersistError<<S as coupery_ksnf::leaf::LeafStore>::Error>>
+pub fn coupery_ksnf::leaf::PersistentLeaf<P>::reserve<S: coupery_ksnf::leaf::LeafStore<P> + ?core::marker::Sized>(&mut self, &mut S, coupery_ksnf::types::SessionId, u64, &[u8], &coupery_ksnf::support::OuterSupport<P>) -> core::result::Result<coupery_ksnf::types::LeafAttempt, coupery_ksnf::leaf::PersistError<<S as coupery_ksnf::leaf::LeafStore>::Error>>
+pub fn coupery_ksnf::leaf::PersistentLeaf<P>::respond<S: coupery_ksnf::leaf::LeafStore<P> + ?core::marker::Sized>(&mut self, &mut S, coupery_ksnf::types::LeafAttempt, &[u8]) -> core::result::Result<coupery_ksnf::signing::DeviceResponse<P>, coupery_ksnf::leaf::PersistError<<S as coupery_ksnf::leaf::LeafStore>::Error>>
+pub fn coupery_ksnf::leaf::PersistentLeaf<P>::reveal<S: coupery_ksnf::leaf::LeafStore<P> + ?core::marker::Sized>(&mut self, &mut S, coupery_ksnf::types::LeafAttempt, alloc::vec::Vec<coupery_ksnf::auth::AuthenticatedCommitment<P>>) -> core::result::Result<coupery_ksnf::signing::NoncePair<P>, coupery_ksnf::leaf::PersistError<<S as coupery_ksnf::leaf::LeafStore>::Error>>
+pub const fn coupery_ksnf::leaf::PersistentLeaf<P>::state(&self) -> core::option::Option<&coupery_ksnf::leaf::LeafRegistry<P>>
+pub struct coupery_ksnf::leaf::StoredJournal<P: coupery_ksnf::profile::Profile>
+impl<P: coupery_ksnf::profile::Profile> coupery_ksnf::leaf::StoredJournal<P>
+pub const fn coupery_ksnf::leaf::StoredJournal<P>::journal(&self) -> &coupery_ksnf::leaf::LeafJournal<P>
+pub const fn coupery_ksnf::leaf::StoredJournal<P>::new(coupery_ksnf::leaf::JournalRevision, coupery_ksnf::leaf::LeafJournal<P>) -> Self
+pub const fn coupery_ksnf::leaf::StoredJournal<P>::revision(&self) -> coupery_ksnf::leaf::JournalRevision
+pub trait coupery_ksnf::leaf::LeafStore<P: coupery_ksnf::profile::Profile>
+pub type coupery_ksnf::leaf::LeafStore::Error
+pub fn coupery_ksnf::leaf::LeafStore::compare_exchange_journal(&mut self, coupery_ksnf::types::DeviceId, core::option::Option<coupery_ksnf::leaf::JournalRevision>, &coupery_ksnf::leaf::LeafJournal<P>) -> core::result::Result<coupery_ksnf::leaf::JournalCas, Self::Error>
+pub fn coupery_ksnf::leaf::LeafStore::get_journal(&mut self, coupery_ksnf::types::DeviceId) -> core::result::Result<core::option::Option<coupery_ksnf::leaf::StoredJournal<P>>, Self::Error>
+pub fn coupery_ksnf::leaf::LeafStore::get_material(&mut self, coupery_ksnf::leaf::MaterialId) -> core::result::Result<core::option::Option<coupery_ksnf::leaf::LeafMaterial<P>>, Self::Error>
+pub fn coupery_ksnf::leaf::LeafStore::put_material(&mut self, &coupery_ksnf::leaf::LeafMaterial<P>) -> core::result::Result<(), Self::Error>
+impl<P: coupery_ksnf::profile::Profile, T: coupery_ksnf::leaf::LeafStore<P> + ?core::marker::Sized> coupery_ksnf::leaf::LeafStore<P> for &mut T
+pub type &mut T::Error = <T as coupery_ksnf::leaf::LeafStore<P>>::Error
+pub fn &mut T::compare_exchange_journal(&mut self, coupery_ksnf::types::DeviceId, core::option::Option<coupery_ksnf::leaf::JournalRevision>, &coupery_ksnf::leaf::LeafJournal<P>) -> core::result::Result<coupery_ksnf::leaf::JournalCas, Self::Error>
+pub fn &mut T::get_journal(&mut self, coupery_ksnf::types::DeviceId) -> core::result::Result<core::option::Option<coupery_ksnf::leaf::StoredJournal<P>>, Self::Error>
+pub fn &mut T::get_material(&mut self, coupery_ksnf::leaf::MaterialId) -> core::result::Result<core::option::Option<coupery_ksnf::leaf::LeafMaterial<P>>, Self::Error>
+pub fn &mut T::put_material(&mut self, &coupery_ksnf::leaf::LeafMaterial<P>) -> core::result::Result<(), Self::Error>
+impl<P: coupery_ksnf::profile::Profile> coupery_ksnf::leaf::LeafStore<P> for coupery_ksnf::leaf::MemoryLeafStore<P>
+pub type coupery_ksnf::leaf::MemoryLeafStore<P>::Error = coupery_ksnf::error::Error
+pub fn coupery_ksnf::leaf::MemoryLeafStore<P>::compare_exchange_journal(&mut self, coupery_ksnf::types::DeviceId, core::option::Option<coupery_ksnf::leaf::JournalRevision>, &coupery_ksnf::leaf::LeafJournal<P>) -> coupery_ksnf::error::Result<coupery_ksnf::leaf::JournalCas>
+pub fn coupery_ksnf::leaf::MemoryLeafStore<P>::get_journal(&mut self, coupery_ksnf::types::DeviceId) -> coupery_ksnf::error::Result<core::option::Option<coupery_ksnf::leaf::StoredJournal<P>>>
+pub fn coupery_ksnf::leaf::MemoryLeafStore<P>::get_material(&mut self, coupery_ksnf::leaf::MaterialId) -> coupery_ksnf::error::Result<core::option::Option<coupery_ksnf::leaf::LeafMaterial<P>>>
+pub fn coupery_ksnf::leaf::MemoryLeafStore<P>::put_material(&mut self, &coupery_ksnf::leaf::LeafMaterial<P>) -> coupery_ksnf::error::Result<()>
+pub mod coupery_ksnf::log_act
+pub enum coupery_ksnf::log_act::LogPhase
+pub coupery_ksnf::log_act::LogPhase::Commit
+pub coupery_ksnf::log_act::LogPhase::Open
+pub coupery_ksnf::log_act::LogPhase::Receipt
+pub enum coupery_ksnf::log_act::Terminal
+pub coupery_ksnf::log_act::Terminal::Aborted
+pub coupery_ksnf::log_act::Terminal::Activated(coupery_ksnf::types::ActivationHandle)
+pub struct coupery_ksnf::log_act::LogTranscript
+impl coupery_ksnf::log_act::LogTranscript
+pub const fn coupery_ksnf::log_act::LogTranscript::next_phase(&self) -> core::option::Option<coupery_ksnf::log_act::LogPhase>
+pub fn coupery_ksnf::log_act::LogTranscript::parameters(&self) -> &[u8]
+pub fn coupery_ksnf::log_act::LogTranscript::post(&self, coupery_ksnf::log_act::LogPhase, &[u8]) -> core::option::Option<&[u8]>
+pub const fn coupery_ksnf::log_act::LogTranscript::predecessor(&self) -> coupery_ksnf::types::ActivationHandle
+pub const fn coupery_ksnf::log_act::LogTranscript::scope(&self) -> coupery_ksnf::types::ScopeId
+pub const fn coupery_ksnf::log_act::LogTranscript::terminal(&self) -> core::option::Option<coupery_ksnf::log_act::Terminal>
+pub struct coupery_ksnf::log_act::MemoryLog
+impl coupery_ksnf::log_act::MemoryLog
+pub fn coupery_ksnf::log_act::MemoryLog::install_genesis(&mut self, coupery_ksnf::types::ScopeId, coupery_ksnf::types::ActivationHandle) -> coupery_ksnf::error::Result<()>
+pub fn coupery_ksnf::log_act::MemoryLog::transcript(&self, coupery_ksnf::types::CommandId) -> core::option::Option<&coupery_ksnf::log_act::LogTranscript>
+impl coupery_ksnf::log_act::LogAct for coupery_ksnf::log_act::MemoryLog
+pub fn coupery_ksnf::log_act::MemoryLog::abort(&mut self, coupery_ksnf::types::CommandId) -> coupery_ksnf::error::Result<coupery_ksnf::log_act::Terminal>
+pub fn coupery_ksnf::log_act::MemoryLog::activate(&mut self, coupery_ksnf::types::CommandId) -> coupery_ksnf::error::Result<coupery_ksnf::log_act::Terminal>
+pub fn coupery_ksnf::log_act::MemoryLog::activate_bundle(&mut self, &[coupery_ksnf::types::CommandId]) -> coupery_ksnf::error::Result<coupery_ksnf::log_act::Terminal>
+pub fn coupery_ksnf::log_act::MemoryLog::begin(&mut self, coupery_ksnf::types::ScopeId, coupery_ksnf::types::CommandId, coupery_ksnf::types::ActivationHandle, &[u8]) -> coupery_ksnf::error::Result<()>
+pub fn coupery_ksnf::log_act::MemoryLog::close_phase(&mut self, coupery_ksnf::types::CommandId, coupery_ksnf::log_act::LogPhase) -> coupery_ksnf::error::Result<()>
+pub fn coupery_ksnf::log_act::MemoryLog::current(&self, coupery_ksnf::types::ScopeId) -> core::option::Option<coupery_ksnf::types::ActivationHandle>
+pub fn coupery_ksnf::log_act::MemoryLog::post(&mut self, coupery_ksnf::types::CommandId, coupery_ksnf::log_act::LogPhase, &[u8], &[u8]) -> coupery_ksnf::error::Result<()>
+pub trait coupery_ksnf::log_act::LogAct
+pub fn coupery_ksnf::log_act::LogAct::abort(&mut self, coupery_ksnf::types::CommandId) -> coupery_ksnf::error::Result<coupery_ksnf::log_act::Terminal>
+pub fn coupery_ksnf::log_act::LogAct::activate(&mut self, coupery_ksnf::types::CommandId) -> coupery_ksnf::error::Result<coupery_ksnf::log_act::Terminal>
+pub fn coupery_ksnf::log_act::LogAct::activate_bundle(&mut self, &[coupery_ksnf::types::CommandId]) -> coupery_ksnf::error::Result<coupery_ksnf::log_act::Terminal>
+pub fn coupery_ksnf::log_act::LogAct::begin(&mut self, coupery_ksnf::types::ScopeId, coupery_ksnf::types::CommandId, coupery_ksnf::types::ActivationHandle, &[u8]) -> coupery_ksnf::error::Result<()>
+pub fn coupery_ksnf::log_act::LogAct::close_phase(&mut self, coupery_ksnf::types::CommandId, coupery_ksnf::log_act::LogPhase) -> coupery_ksnf::error::Result<()>
+pub fn coupery_ksnf::log_act::LogAct::current(&self, coupery_ksnf::types::ScopeId) -> core::option::Option<coupery_ksnf::types::ActivationHandle>
+pub fn coupery_ksnf::log_act::LogAct::post(&mut self, coupery_ksnf::types::CommandId, coupery_ksnf::log_act::LogPhase, &[u8], &[u8]) -> coupery_ksnf::error::Result<()>
+impl coupery_ksnf::log_act::LogAct for coupery_ksnf::log_act::MemoryLog
+pub fn coupery_ksnf::log_act::MemoryLog::abort(&mut self, coupery_ksnf::types::CommandId) -> coupery_ksnf::error::Result<coupery_ksnf::log_act::Terminal>
+pub fn coupery_ksnf::log_act::MemoryLog::activate(&mut self, coupery_ksnf::types::CommandId) -> coupery_ksnf::error::Result<coupery_ksnf::log_act::Terminal>
+pub fn coupery_ksnf::log_act::MemoryLog::activate_bundle(&mut self, &[coupery_ksnf::types::CommandId]) -> coupery_ksnf::error::Result<coupery_ksnf::log_act::Terminal>
+pub fn coupery_ksnf::log_act::MemoryLog::begin(&mut self, coupery_ksnf::types::ScopeId, coupery_ksnf::types::CommandId, coupery_ksnf::types::ActivationHandle, &[u8]) -> coupery_ksnf::error::Result<()>
+pub fn coupery_ksnf::log_act::MemoryLog::close_phase(&mut self, coupery_ksnf::types::CommandId, coupery_ksnf::log_act::LogPhase) -> coupery_ksnf::error::Result<()>
+pub fn coupery_ksnf::log_act::MemoryLog::current(&self, coupery_ksnf::types::ScopeId) -> core::option::Option<coupery_ksnf::types::ActivationHandle>
+pub fn coupery_ksnf::log_act::MemoryLog::post(&mut self, coupery_ksnf::types::CommandId, coupery_ksnf::log_act::LogPhase, &[u8], &[u8]) -> coupery_ksnf::error::Result<()>
+pub mod coupery_ksnf::profile
+pub enum coupery_ksnf::profile::HashDomain
+pub coupery_ksnf::profile::HashDomain::Bind
+pub coupery_ksnf::profile::HashDomain::Deal
+pub coupery_ksnf::profile::HashDomain::Member
+pub coupery_ksnf::profile::HashDomain::Nonce
+pub struct coupery_ksnf::profile::Secp256k1
+impl coupery_ksnf::profile::Profile for coupery_ksnf::profile::Secp256k1
+pub type coupery_ksnf::profile::Secp256k1::Group = frost_secp256k1::Secp256K1Group
+pub type coupery_ksnf::profile::Secp256k1::SignatureBytes = [u8; 65]
+pub const coupery_ksnf::profile::Secp256k1::JOURNAL_MAGIC: &'static [u8; 8]
+pub const coupery_ksnf::profile::Secp256k1::MATERIAL_MAGIC: &'static [u8; 8]
+pub const coupery_ksnf::profile::Secp256k1::PROTOCOL_ID: &'static [u8]
+pub const coupery_ksnf::profile::Secp256k1::WIRE_ID: u8
+pub fn coupery_ksnf::profile::Secp256k1::challenge(&[u8], &[u8], &[u8]) -> coupery_ksnf::error::Result<coupery_ksnf::profile::Scalar<Self>>
+pub fn coupery_ksnf::profile::Secp256k1::clear_scalar(&mut coupery_ksnf::profile::Scalar<Self>)
+pub fn coupery_ksnf::profile::Secp256k1::decode_signature(&[u8]) -> coupery_ksnf::error::Result<(coupery_ksnf::profile::PointBytes<Self>, coupery_ksnf::profile::ScalarBytes<Self>)>
+pub fn coupery_ksnf::profile::Secp256k1::encode_point(&coupery_ksnf::profile::RawElement<Self>) -> coupery_ksnf::profile::PointBytes<Self>
+pub fn coupery_ksnf::profile::Secp256k1::encode_signature(&coupery_ksnf::profile::PointBytes<Self>, &coupery_ksnf::profile::ScalarBytes<Self>) -> Self::SignatureBytes
+pub fn coupery_ksnf::profile::Secp256k1::hash_to_scalar(coupery_ksnf::profile::HashDomain, &[u8]) -> coupery_ksnf::error::Result<coupery_ksnf::profile::Scalar<Self>>
+pub fn coupery_ksnf::profile::Secp256k1::scalar_from_u64(u64) -> coupery_ksnf::profile::Scalar<Self>
+pub trait coupery_ksnf::profile::Profile: coupery_ksnf::profile::private::Sealed + core::marker::Copy + core::cmp::Eq + core::fmt::Debug + core::marker::Send + core::marker::Sync + 'static
+pub type coupery_ksnf::profile::Profile::Group: frost_core::traits::Group
+pub type coupery_ksnf::profile::Profile::SignatureBytes: core::convert::AsRef<[u8]> + core::marker::Copy + core::cmp::Eq + core::fmt::Debug
+pub const coupery_ksnf::profile::Profile::JOURNAL_MAGIC: &'static [u8; 8]
+pub const coupery_ksnf::profile::Profile::MATERIAL_MAGIC: &'static [u8; 8]
+pub const coupery_ksnf::profile::Profile::PROTOCOL_ID: &'static [u8]
+pub const coupery_ksnf::profile::Profile::WIRE_ID: u8
+pub fn coupery_ksnf::profile::Profile::challenge(&[u8], &[u8], &[u8]) -> coupery_ksnf::error::Result<coupery_ksnf::profile::Scalar<Self>>
+pub fn coupery_ksnf::profile::Profile::clear_scalar(&mut coupery_ksnf::profile::Scalar<Self>)
+pub fn coupery_ksnf::profile::Profile::decode_signature(&[u8]) -> coupery_ksnf::error::Result<(coupery_ksnf::profile::PointBytes<Self>, coupery_ksnf::profile::ScalarBytes<Self>)>
+pub fn coupery_ksnf::profile::Profile::encode_point(&coupery_ksnf::profile::RawElement<Self>) -> coupery_ksnf::profile::PointBytes<Self>
+pub fn coupery_ksnf::profile::Profile::encode_signature(&coupery_ksnf::profile::PointBytes<Self>, &coupery_ksnf::profile::ScalarBytes<Self>) -> Self::SignatureBytes
+pub fn coupery_ksnf::profile::Profile::hash_to_scalar(coupery_ksnf::profile::HashDomain, &[u8]) -> coupery_ksnf::error::Result<coupery_ksnf::profile::Scalar<Self>>
+pub fn coupery_ksnf::profile::Profile::scalar_from_u64(u64) -> coupery_ksnf::profile::Scalar<Self>
+impl coupery_ksnf::profile::Profile for coupery_ksnf::profile::Secp256k1
+pub type coupery_ksnf::profile::Secp256k1::Group = frost_secp256k1::Secp256K1Group
+pub type coupery_ksnf::profile::Secp256k1::SignatureBytes = [u8; 65]
+pub const coupery_ksnf::profile::Secp256k1::JOURNAL_MAGIC: &'static [u8; 8]
+pub const coupery_ksnf::profile::Secp256k1::MATERIAL_MAGIC: &'static [u8; 8]
+pub const coupery_ksnf::profile::Secp256k1::PROTOCOL_ID: &'static [u8]
+pub const coupery_ksnf::profile::Secp256k1::WIRE_ID: u8
+pub fn coupery_ksnf::profile::Secp256k1::challenge(&[u8], &[u8], &[u8]) -> coupery_ksnf::error::Result<coupery_ksnf::profile::Scalar<Self>>
+pub fn coupery_ksnf::profile::Secp256k1::clear_scalar(&mut coupery_ksnf::profile::Scalar<Self>)
+pub fn coupery_ksnf::profile::Secp256k1::decode_signature(&[u8]) -> coupery_ksnf::error::Result<(coupery_ksnf::profile::PointBytes<Self>, coupery_ksnf::profile::ScalarBytes<Self>)>
+pub fn coupery_ksnf::profile::Secp256k1::encode_point(&coupery_ksnf::profile::RawElement<Self>) -> coupery_ksnf::profile::PointBytes<Self>
+pub fn coupery_ksnf::profile::Secp256k1::encode_signature(&coupery_ksnf::profile::PointBytes<Self>, &coupery_ksnf::profile::ScalarBytes<Self>) -> Self::SignatureBytes
+pub fn coupery_ksnf::profile::Secp256k1::hash_to_scalar(coupery_ksnf::profile::HashDomain, &[u8]) -> coupery_ksnf::error::Result<coupery_ksnf::profile::Scalar<Self>>
+pub fn coupery_ksnf::profile::Secp256k1::scalar_from_u64(u64) -> coupery_ksnf::profile::Scalar<Self>
+pub type coupery_ksnf::profile::PointBytes<P> = <<P as coupery_ksnf::profile::Profile>::Group as frost_core::traits::Group>::Serialization
+pub type coupery_ksnf::profile::RawElement<P> = <<P as coupery_ksnf::profile::Profile>::Group as frost_core::traits::Group>::Element
+pub type coupery_ksnf::profile::Scalar<P> = <<<P as coupery_ksnf::profile::Profile>::Group as frost_core::traits::Group>::Field as frost_core::traits::Field>::Scalar
+pub type coupery_ksnf::profile::ScalarBytes<P> = <<<P as coupery_ksnf::profile::Profile>::Group as frost_core::traits::Group>::Field as frost_core::traits::Field>::Serialization
+pub mod coupery_ksnf::secp256k1
+pub const coupery_ksnf::secp256k1::PROFILE_ID: &[u8]
+pub const coupery_ksnf::secp256k1::WIRE_ID: u8
+pub type coupery_ksnf::secp256k1::Candidate = coupery_ksnf::dealing::Candidate<coupery_ksnf::profile::Secp256k1>
+pub type coupery_ksnf::secp256k1::DeviceGenesis = coupery_ksnf::genesis::DeviceGenesis<coupery_ksnf::profile::Secp256k1>
+pub type coupery_ksnf::secp256k1::DeviceResponse = coupery_ksnf::signing::DeviceResponse<coupery_ksnf::profile::Secp256k1>
+pub type coupery_ksnf::secp256k1::Element = coupery_ksnf::algebra::Element<coupery_ksnf::profile::Secp256k1>
+pub type coupery_ksnf::secp256k1::IdentityKey = coupery_ksnf::keys::IdentityKey<coupery_ksnf::profile::Secp256k1>
+pub type coupery_ksnf::secp256k1::InnerBundle = coupery_ksnf::dealing::InnerBundle<coupery_ksnf::profile::Secp256k1>
+pub type coupery_ksnf::secp256k1::LeafRegistry = coupery_ksnf::leaf::LeafRegistry<coupery_ksnf::profile::Secp256k1>
+pub type coupery_ksnf::secp256k1::MemberPoint = coupery_ksnf::keys::MemberPoint<coupery_ksnf::profile::Secp256k1>
+pub type coupery_ksnf::secp256k1::MemberResponse = coupery_ksnf::signing::MemberResponse<coupery_ksnf::profile::Secp256k1>
+pub type coupery_ksnf::secp256k1::MemoryLeafStore = coupery_ksnf::leaf::MemoryLeafStore<coupery_ksnf::profile::Secp256k1>
+pub type coupery_ksnf::secp256k1::PersistentLeaf = coupery_ksnf::leaf::PersistentLeaf<coupery_ksnf::profile::Secp256k1>
+pub type coupery_ksnf::secp256k1::Point = coupery_ksnf::algebra::Point<coupery_ksnf::profile::Secp256k1>
+pub type coupery_ksnf::secp256k1::Profile = coupery_ksnf::profile::Secp256k1
+pub type coupery_ksnf::secp256k1::Scalar = coupery_ksnf::algebra::ScalarFor<coupery_ksnf::profile::Secp256k1>
+pub type coupery_ksnf::secp256k1::SecretScalar = coupery_ksnf::algebra::SecretScalar<coupery_ksnf::profile::Secp256k1>
+pub type coupery_ksnf::secp256k1::SharePoint = coupery_ksnf::keys::SharePoint<coupery_ksnf::profile::Secp256k1>
+pub type coupery_ksnf::secp256k1::Signature = coupery_ksnf::signing::Signature<coupery_ksnf::profile::Secp256k1>
+pub type coupery_ksnf::secp256k1::SigningContext<'a> = coupery_ksnf::transcript::SigningContext<'a, coupery_ksnf::profile::Secp256k1>
+pub type coupery_ksnf::secp256k1::ValidatedPublicGenesis = coupery_ksnf::genesis::ValidatedPublicGenesis<coupery_ksnf::profile::Secp256k1>
+pub type coupery_ksnf::secp256k1::VaultKey = coupery_ksnf::keys::VaultKey<coupery_ksnf::profile::Secp256k1>
+pub mod coupery_ksnf::shamir
+pub struct coupery_ksnf::shamir::Node<P: coupery_ksnf::profile::Profile>(_)
+impl<P: coupery_ksnf::profile::Profile> coupery_ksnf::shamir::Node<P>
+pub fn coupery_ksnf::shamir::Node<P>::from_u64(u64) -> coupery_ksnf::error::Result<Self>
+pub fn coupery_ksnf::shamir::Node<P>::new(coupery_ksnf::algebra::ScalarFor<P>) -> coupery_ksnf::error::Result<Self>
+pub const fn coupery_ksnf::shamir::Node<P>::scalar(self) -> coupery_ksnf::algebra::ScalarFor<P>
+impl<P: coupery_ksnf::profile::Profile> core::fmt::Debug for coupery_ksnf::shamir::Node<P>
+pub fn coupery_ksnf::shamir::Node<P>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub struct coupery_ksnf::shamir::Polynomial<P: coupery_ksnf::profile::Profile>
+impl<P: coupery_ksnf::profile::Profile> coupery_ksnf::shamir::Polynomial<P>
+pub fn coupery_ksnf::shamir::Polynomial<P>::commitments(&self) -> alloc::vec::Vec<coupery_ksnf::algebra::Element<P>>
+pub fn coupery_ksnf::shamir::Polynomial<P>::evaluate(&self, coupery_ksnf::shamir::Node<P>) -> coupery_ksnf::algebra::SecretScalar<P>
+pub const fn coupery_ksnf::shamir::Polynomial<P>::is_empty(&self) -> bool
+pub fn coupery_ksnf::shamir::Polynomial<P>::len(&self) -> usize
+pub fn coupery_ksnf::shamir::Polynomial<P>::new(alloc::vec::Vec<coupery_ksnf::algebra::ScalarFor<P>>) -> coupery_ksnf::error::Result<Self>
+pub fn coupery_ksnf::shamir::Polynomial<P>::sample(usize, &coupery_ksnf::algebra::SecretScalar<P>, &mut impl rand_core::CryptoRng + rand_core::RngCore) -> coupery_ksnf::error::Result<Self>
+impl<P: coupery_ksnf::profile::Profile> core::ops::drop::Drop for coupery_ksnf::shamir::Polynomial<P>
+pub fn coupery_ksnf::shamir::Polynomial<P>::drop(&mut self)
+pub fn coupery_ksnf::shamir::interpolate_constant<P: coupery_ksnf::profile::Profile>(&[coupery_ksnf::shamir::Node<P>], &[coupery_ksnf::algebra::ScalarFor<P>]) -> coupery_ksnf::error::Result<coupery_ksnf::algebra::ScalarFor<P>>
+pub fn coupery_ksnf::shamir::lagrange_at_zero<P: coupery_ksnf::profile::Profile>(&[coupery_ksnf::shamir::Node<P>]) -> coupery_ksnf::error::Result<alloc::vec::Vec<coupery_ksnf::algebra::ScalarFor<P>>>
+pub mod coupery_ksnf::signing
+pub mod coupery_ksnf::signing::hazmat
+pub fn coupery_ksnf::signing::hazmat::respond_device<P: coupery_ksnf::profile::Profile>(coupery_ksnf::signing::Nonce<P>, &coupery_ksnf::transcript::MemberTranscript<P>, &coupery_ksnf::transcript::SigningContext<'_, P>, &coupery_ksnf::signing::DeviceNonceSet<P>, coupery_ksnf::types::DeviceId, &coupery_ksnf::algebra::SecretScalar<P>) -> coupery_ksnf::error::Result<coupery_ksnf::signing::DeviceResponse<P>>
+pub struct coupery_ksnf::signing::DeviceNonce<P: coupery_ksnf::profile::Profile>
+impl<P: coupery_ksnf::profile::Profile> coupery_ksnf::signing::DeviceNonce<P>
+pub const fn coupery_ksnf::signing::DeviceNonce<P>::attempt(self) -> coupery_ksnf::types::LeafAttempt
+pub const fn coupery_ksnf::signing::DeviceNonce<P>::device(self) -> coupery_ksnf::types::DeviceId
+pub const fn coupery_ksnf::signing::DeviceNonce<P>::new(coupery_ksnf::types::LeafAttempt, coupery_ksnf::signing::NoncePair<P>) -> Self
+pub const fn coupery_ksnf::signing::DeviceNonce<P>::nonce(self) -> coupery_ksnf::signing::NoncePair<P>
+pub struct coupery_ksnf::signing::DeviceNonceSet<P: coupery_ksnf::profile::Profile>
+impl<P: coupery_ksnf::profile::Profile> coupery_ksnf::signing::DeviceNonceSet<P>
+pub const fn coupery_ksnf::signing::DeviceNonceSet<P>::aggregate(&self) -> coupery_ksnf::signing::NoncePair<P>
+pub fn coupery_ksnf::signing::DeviceNonceSet<P>::attempt(&self, coupery_ksnf::types::DeviceId) -> coupery_ksnf::error::Result<coupery_ksnf::types::LeafAttempt>
+pub fn coupery_ksnf::signing::DeviceNonceSet<P>::new(&coupery_ksnf::support::InnerSupport<P>, alloc::vec::Vec<coupery_ksnf::signing::DeviceNonce<P>>) -> coupery_ksnf::error::Result<Self>
+pub fn coupery_ksnf::signing::DeviceNonceSet<P>::nonce(&self, coupery_ksnf::types::DeviceId) -> coupery_ksnf::error::Result<coupery_ksnf::signing::NoncePair<P>>
+pub struct coupery_ksnf::signing::DeviceResponse<P: coupery_ksnf::profile::Profile>
+impl<P: coupery_ksnf::profile::Profile> coupery_ksnf::signing::DeviceResponse<P>
+pub const fn coupery_ksnf::signing::DeviceResponse<P>::attempt(self) -> coupery_ksnf::types::LeafAttempt
+pub const fn coupery_ksnf::signing::DeviceResponse<P>::device(self) -> coupery_ksnf::types::DeviceId
+pub fn coupery_ksnf::signing::DeviceResponse<P>::from_bytes(&[u8; 73]) -> coupery_ksnf::error::Result<Self>
+pub const fn coupery_ksnf::signing::DeviceResponse<P>::new(coupery_ksnf::types::LeafAttempt, coupery_ksnf::algebra::ScalarFor<P>) -> Self
+pub const fn coupery_ksnf::signing::DeviceResponse<P>::scalar(self) -> coupery_ksnf::algebra::ScalarFor<P>
+pub fn coupery_ksnf::signing::DeviceResponse<P>::to_bytes(self) -> [u8; 73]
+impl<P: coupery_ksnf::profile::Profile> core::convert::From<coupery_ksnf::signing::DeviceResponse<P>> for [u8; 73]
+pub fn [u8; 73]::from(coupery_ksnf::signing::DeviceResponse<P>) -> Self
+impl<P: coupery_ksnf::profile::Profile> core::convert::TryFrom<&[u8]> for coupery_ksnf::signing::DeviceResponse<P>
+pub type coupery_ksnf::signing::DeviceResponse<P>::Error = coupery_ksnf::error::Error
+pub fn coupery_ksnf::signing::DeviceResponse<P>::try_from(&[u8]) -> coupery_ksnf::error::Result<Self>
+impl<P: coupery_ksnf::profile::Profile> core::fmt::Debug for coupery_ksnf::signing::DeviceResponse<P>
+pub fn coupery_ksnf::signing::DeviceResponse<P>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub struct coupery_ksnf::signing::MemberResponse<P: coupery_ksnf::profile::Profile>
+impl<P: coupery_ksnf::profile::Profile> coupery_ksnf::signing::MemberResponse<P>
+pub fn coupery_ksnf::signing::MemberResponse<P>::from_bytes(&[u8; 35]) -> coupery_ksnf::error::Result<Self>
+pub const fn coupery_ksnf::signing::MemberResponse<P>::new(coupery_ksnf::types::Slot, coupery_ksnf::algebra::ScalarFor<P>) -> Self
+pub const fn coupery_ksnf::signing::MemberResponse<P>::scalar(self) -> coupery_ksnf::algebra::ScalarFor<P>
+pub const fn coupery_ksnf::signing::MemberResponse<P>::slot(self) -> coupery_ksnf::types::Slot
+pub fn coupery_ksnf::signing::MemberResponse<P>::to_bytes(self) -> [u8; 35]
+impl<P: coupery_ksnf::profile::Profile> core::convert::From<coupery_ksnf::signing::MemberResponse<P>> for [u8; 35]
+pub fn [u8; 35]::from(coupery_ksnf::signing::MemberResponse<P>) -> Self
+impl<P: coupery_ksnf::profile::Profile> core::convert::TryFrom<&[u8]> for coupery_ksnf::signing::MemberResponse<P>
+pub type coupery_ksnf::signing::MemberResponse<P>::Error = coupery_ksnf::error::Error
+pub fn coupery_ksnf::signing::MemberResponse<P>::try_from(&[u8]) -> coupery_ksnf::error::Result<Self>
+impl<P: coupery_ksnf::profile::Profile> core::fmt::Debug for coupery_ksnf::signing::MemberResponse<P>
+pub fn coupery_ksnf::signing::MemberResponse<P>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub struct coupery_ksnf::signing::Nonce<P: coupery_ksnf::profile::Profile>
+impl<P: coupery_ksnf::profile::Profile> coupery_ksnf::signing::Nonce<P>
+pub fn coupery_ksnf::signing::Nonce<P>::commitments(&self) -> coupery_ksnf::error::Result<coupery_ksnf::signing::NoncePair<P>>
+pub fn coupery_ksnf::signing::Nonce<P>::new(coupery_ksnf::algebra::ScalarFor<P>, coupery_ksnf::algebra::ScalarFor<P>) -> coupery_ksnf::error::Result<Self>
+pub fn coupery_ksnf::signing::Nonce<P>::respond(self, coupery_ksnf::algebra::ScalarFor<P>, coupery_ksnf::algebra::ScalarFor<P>, coupery_ksnf::algebra::ScalarFor<P>, &coupery_ksnf::algebra::SecretScalar<P>) -> coupery_ksnf::algebra::ScalarFor<P>
+pub fn coupery_ksnf::signing::Nonce<P>::sample(&mut impl rand_core::CryptoRng + rand_core::RngCore) -> Self
+impl<P: coupery_ksnf::profile::Profile> core::ops::drop::Drop for coupery_ksnf::signing::Nonce<P>
+pub fn coupery_ksnf::signing::Nonce<P>::drop(&mut self)
+pub struct coupery_ksnf::signing::NoncePair<P: coupery_ksnf::profile::Profile>
+impl<P: coupery_ksnf::profile::Profile> coupery_ksnf::signing::NoncePair<P>
+pub fn coupery_ksnf::signing::NoncePair<P>::bind(self, coupery_ksnf::algebra::ScalarFor<P>) -> coupery_ksnf::algebra::Element<P>
+pub const fn coupery_ksnf::signing::NoncePair<P>::binding(self) -> coupery_ksnf::algebra::Point<P>
+pub const fn coupery_ksnf::signing::NoncePair<P>::hiding(self) -> coupery_ksnf::algebra::Point<P>
+pub const fn coupery_ksnf::signing::NoncePair<P>::new(coupery_ksnf::algebra::Point<P>, coupery_ksnf::algebra::Point<P>) -> Self
+pub struct coupery_ksnf::signing::Signature<P: coupery_ksnf::profile::Profile>
+impl<P: coupery_ksnf::profile::Profile> coupery_ksnf::signing::Signature<P>
+pub fn coupery_ksnf::signing::Signature<P>::from_bytes(&[u8]) -> coupery_ksnf::error::Result<Self>
+pub const fn coupery_ksnf::signing::Signature<P>::new(coupery_ksnf::algebra::Point<P>, coupery_ksnf::algebra::ScalarFor<P>) -> Self
+pub const fn coupery_ksnf::signing::Signature<P>::nonce(self) -> coupery_ksnf::algebra::Point<P>
+pub const fn coupery_ksnf::signing::Signature<P>::response(self) -> coupery_ksnf::algebra::ScalarFor<P>
+pub fn coupery_ksnf::signing::Signature<P>::to_bytes(self) -> <P as coupery_ksnf::profile::Profile>::SignatureBytes
+pub fn coupery_ksnf::signing::Signature<P>::verify(self, coupery_ksnf::keys::VaultKey<P>, &[u8]) -> coupery_ksnf::error::Result<()>
+impl core::convert::From<coupery_ksnf::signing::Signature> for [u8; 65]
+pub fn [u8; 65]::from(coupery_ksnf::signing::Signature<coupery_ksnf::profile::Secp256k1>) -> Self
+impl<P: coupery_ksnf::profile::Profile> core::convert::TryFrom<&[u8]> for coupery_ksnf::signing::Signature<P>
+pub type coupery_ksnf::signing::Signature<P>::Error = coupery_ksnf::error::Error
+pub fn coupery_ksnf::signing::Signature<P>::try_from(&[u8]) -> coupery_ksnf::error::Result<Self>
+impl<P: coupery_ksnf::profile::Profile> core::fmt::Debug for coupery_ksnf::signing::Signature<P>
+pub fn coupery_ksnf::signing::Signature<P>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn coupery_ksnf::signing::aggregate_member<P: coupery_ksnf::profile::Profile>(&coupery_ksnf::transcript::MemberTranscript<P>, &coupery_ksnf::transcript::SigningContext<'_, P>, &coupery_ksnf::signing::DeviceNonceSet<P>, &[coupery_ksnf::signing::DeviceResponse<P>]) -> coupery_ksnf::error::Result<coupery_ksnf::signing::MemberResponse<P>>
+pub fn coupery_ksnf::signing::aggregate_nonce<P: coupery_ksnf::profile::Profile>(&[(coupery_ksnf::signing::NoncePair<P>, coupery_ksnf::algebra::ScalarFor<P>)]) -> coupery_ksnf::error::Result<coupery_ksnf::algebra::Point<P>>
+pub fn coupery_ksnf::signing::aggregate_signature<P: coupery_ksnf::profile::Profile>(&coupery_ksnf::transcript::SigningContext<'_, P>, &coupery_ksnf::support::OuterSupport<P>, &[coupery_ksnf::signing::MemberResponse<P>]) -> coupery_ksnf::error::Result<coupery_ksnf::signing::Signature<P>>
+pub fn coupery_ksnf::signing::binding_factor<P: coupery_ksnf::profile::Profile>(&[u8]) -> coupery_ksnf::error::Result<coupery_ksnf::algebra::ScalarFor<P>>
+pub fn coupery_ksnf::signing::challenge<P: coupery_ksnf::profile::Profile>(coupery_ksnf::algebra::Point<P>, coupery_ksnf::keys::VaultKey<P>, &[u8]) -> coupery_ksnf::error::Result<coupery_ksnf::algebra::ScalarFor<P>>
+pub fn coupery_ksnf::signing::verify_device<P: coupery_ksnf::profile::Profile>(coupery_ksnf::algebra::ScalarFor<P>, coupery_ksnf::signing::NoncePair<P>, coupery_ksnf::algebra::ScalarFor<P>, coupery_ksnf::algebra::ScalarFor<P>, coupery_ksnf::algebra::ScalarFor<P>, coupery_ksnf::keys::SharePoint<P>) -> coupery_ksnf::error::Result<()>
+pub fn coupery_ksnf::signing::verify_member<P: coupery_ksnf::profile::Profile>(coupery_ksnf::algebra::ScalarFor<P>, coupery_ksnf::signing::NoncePair<P>, coupery_ksnf::algebra::ScalarFor<P>, coupery_ksnf::algebra::ScalarFor<P>, coupery_ksnf::algebra::ScalarFor<P>, coupery_ksnf::keys::MemberPoint<P>) -> coupery_ksnf::error::Result<()>
+pub mod coupery_ksnf::support
+pub struct coupery_ksnf::support::DeviceParticipant<P: coupery_ksnf::profile::Profile>
+impl<P: coupery_ksnf::profile::Profile> coupery_ksnf::support::DeviceParticipant<P>
+pub const fn coupery_ksnf::support::DeviceParticipant<P>::device(self) -> coupery_ksnf::types::DeviceId
+pub const fn coupery_ksnf::support::DeviceParticipant<P>::new(coupery_ksnf::types::DeviceId, coupery_ksnf::shamir::Node<P>, coupery_ksnf::keys::SharePoint<P>) -> Self
+pub const fn coupery_ksnf::support::DeviceParticipant<P>::node(self) -> coupery_ksnf::shamir::Node<P>
+pub const fn coupery_ksnf::support::DeviceParticipant<P>::share(self) -> coupery_ksnf::keys::SharePoint<P>
+pub struct coupery_ksnf::support::InnerCoefficient<P: coupery_ksnf::profile::Profile>
+impl<P: coupery_ksnf::profile::Profile> coupery_ksnf::support::InnerCoefficient<P>
+pub const fn coupery_ksnf::support::InnerCoefficient<P>::device(self) -> coupery_ksnf::types::DeviceId
+pub const fn coupery_ksnf::support::InnerCoefficient<P>::scalar(self) -> coupery_ksnf::algebra::ScalarFor<P>
+impl<P: coupery_ksnf::profile::Profile> core::fmt::Debug for coupery_ksnf::support::InnerCoefficient<P>
+pub fn coupery_ksnf::support::InnerCoefficient<P>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub struct coupery_ksnf::support::InnerSupport<P: coupery_ksnf::profile::Profile>
+impl<P: coupery_ksnf::profile::Profile> coupery_ksnf::support::InnerSupport<P>
+pub fn coupery_ksnf::support::InnerSupport<P>::coefficient(&self, coupery_ksnf::types::DeviceId) -> coupery_ksnf::error::Result<coupery_ksnf::support::InnerCoefficient<P>>
+pub fn coupery_ksnf::support::InnerSupport<P>::new(alloc::vec::Vec<coupery_ksnf::support::DeviceParticipant<P>>) -> coupery_ksnf::error::Result<Self>
+pub fn coupery_ksnf::support::InnerSupport<P>::participant(&self, coupery_ksnf::types::DeviceId) -> coupery_ksnf::error::Result<coupery_ksnf::support::DeviceParticipant<P>>
+pub fn coupery_ksnf::support::InnerSupport<P>::participants(&self) -> &[coupery_ksnf::support::DeviceParticipant<P>]
+impl<P: coupery_ksnf::profile::Profile> coupery_ksnf::support::InnerSupport<P>
+pub fn coupery_ksnf::support::InnerSupport<P>::source_weight(&self, coupery_ksnf::types::DeviceId) -> coupery_ksnf::error::Result<coupery_ksnf::support::SourceWeight<P>>
+impl<P: coupery_ksnf::profile::Profile> core::fmt::Debug for coupery_ksnf::support::InnerSupport<P>
+pub fn coupery_ksnf::support::InnerSupport<P>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub struct coupery_ksnf::support::OuterCoefficient<P: coupery_ksnf::profile::Profile>
+impl<P: coupery_ksnf::profile::Profile> coupery_ksnf::support::OuterCoefficient<P>
+pub const fn coupery_ksnf::support::OuterCoefficient<P>::member(self) -> coupery_ksnf::keys::MemberPoint<P>
+pub const fn coupery_ksnf::support::OuterCoefficient<P>::person(self) -> coupery_ksnf::types::PersonId
+pub const fn coupery_ksnf::support::OuterCoefficient<P>::scalar(self) -> coupery_ksnf::algebra::ScalarFor<P>
+pub const fn coupery_ksnf::support::OuterCoefficient<P>::slot(self) -> coupery_ksnf::types::Slot
+impl<P: coupery_ksnf::profile::Profile> core::fmt::Debug for coupery_ksnf::support::OuterCoefficient<P>
+pub fn coupery_ksnf::support::OuterCoefficient<P>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub struct coupery_ksnf::support::OuterSupport<P: coupery_ksnf::profile::Profile>
+impl<P: coupery_ksnf::profile::Profile> coupery_ksnf::support::OuterSupport<P>
+pub fn coupery_ksnf::support::OuterSupport<P>::coefficient(&self, coupery_ksnf::types::PersonId) -> coupery_ksnf::error::Result<coupery_ksnf::support::OuterCoefficient<P>>
+pub fn coupery_ksnf::support::OuterSupport<P>::new(alloc::vec::Vec<coupery_ksnf::support::PersonParticipant<P>>) -> coupery_ksnf::error::Result<Self>
+pub fn coupery_ksnf::support::OuterSupport<P>::participant(&self, coupery_ksnf::types::Slot) -> coupery_ksnf::error::Result<coupery_ksnf::support::PersonParticipant<P>>
+pub fn coupery_ksnf::support::OuterSupport<P>::participants(&self) -> &[coupery_ksnf::support::PersonParticipant<P>]
+pub fn coupery_ksnf::support::OuterSupport<P>::source_weight(&self, coupery_ksnf::types::PersonId, &coupery_ksnf::support::InnerSupport<P>, coupery_ksnf::types::DeviceId) -> coupery_ksnf::error::Result<coupery_ksnf::support::SourceWeight<P>>
+impl<P: coupery_ksnf::profile::Profile> core::fmt::Debug for coupery_ksnf::support::OuterSupport<P>
+pub fn coupery_ksnf::support::OuterSupport<P>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub struct coupery_ksnf::support::PersonParticipant<P: coupery_ksnf::profile::Profile>
+impl<P: coupery_ksnf::profile::Profile> coupery_ksnf::support::PersonParticipant<P>
+pub const fn coupery_ksnf::support::PersonParticipant<P>::member(self) -> coupery_ksnf::keys::MemberPoint<P>
+pub const fn coupery_ksnf::support::PersonParticipant<P>::new(coupery_ksnf::types::PersonId, coupery_ksnf::types::Slot, coupery_ksnf::shamir::Node<P>, coupery_ksnf::keys::MemberPoint<P>) -> Self
+pub const fn coupery_ksnf::support::PersonParticipant<P>::node(self) -> coupery_ksnf::shamir::Node<P>
+pub const fn coupery_ksnf::support::PersonParticipant<P>::person(self) -> coupery_ksnf::types::PersonId
+pub const fn coupery_ksnf::support::PersonParticipant<P>::slot(self) -> coupery_ksnf::types::Slot
+pub struct coupery_ksnf::support::SourceWeight<P: coupery_ksnf::profile::Profile>
+impl<P: coupery_ksnf::profile::Profile> coupery_ksnf::support::SourceWeight<P>
+pub const fn coupery_ksnf::support::SourceWeight<P>::device(self) -> coupery_ksnf::types::DeviceId
+pub const fn coupery_ksnf::support::SourceWeight<P>::scalar(self) -> coupery_ksnf::algebra::ScalarFor<P>
+impl<P: coupery_ksnf::profile::Profile> core::fmt::Debug for coupery_ksnf::support::SourceWeight<P>
+pub fn coupery_ksnf::support::SourceWeight<P>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub mod coupery_ksnf::transcript
+pub struct coupery_ksnf::transcript::MemberBody<P: coupery_ksnf::profile::Profile>
+impl<P: coupery_ksnf::profile::Profile> coupery_ksnf::transcript::MemberBody<P>
+pub const fn coupery_ksnf::transcript::MemberBody<P>::epoch(&self) -> coupery_ksnf::keys::KeyEpoch
+pub fn coupery_ksnf::transcript::MemberBody<P>::from_bytes(&[u8], &coupery_ksnf::support::OuterSupport<P>) -> coupery_ksnf::error::Result<Self>
+pub const fn coupery_ksnf::transcript::MemberBody<P>::identity(&self) -> coupery_ksnf::keys::IdentityKey<P>
+pub const fn coupery_ksnf::transcript::MemberBody<P>::inner_support(&self) -> &coupery_ksnf::support::InnerSupport<P>
+pub const fn coupery_ksnf::transcript::MemberBody<P>::member(&self) -> coupery_ksnf::keys::MemberPoint<P>
+pub fn coupery_ksnf::transcript::MemberBody<P>::new(coupery_ksnf::keys::IdentityKey<P>, coupery_ksnf::keys::MemberPoint<P>, coupery_ksnf::keys::KeyEpoch, coupery_ksnf::support::InnerSupport<P>, coupery_ksnf::support::OuterCoefficient<P>) -> coupery_ksnf::error::Result<Self>
+pub const fn coupery_ksnf::transcript::MemberBody<P>::outer_coefficient(&self) -> coupery_ksnf::support::OuterCoefficient<P>
+pub fn coupery_ksnf::transcript::MemberBody<P>::to_bytes(&self) -> coupery_ksnf::error::Result<alloc::vec::Vec<u8>>
+impl<P: coupery_ksnf::profile::Profile> core::fmt::Debug for coupery_ksnf::transcript::MemberBody<P>
+pub fn coupery_ksnf::transcript::MemberBody<P>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub struct coupery_ksnf::transcript::MemberNonce<P: coupery_ksnf::profile::Profile>
+impl<P: coupery_ksnf::profile::Profile> coupery_ksnf::transcript::MemberNonce<P>
+pub const fn coupery_ksnf::transcript::MemberNonce<P>::new(coupery_ksnf::types::Slot, coupery_ksnf::signing::NoncePair<P>) -> Self
+pub const fn coupery_ksnf::transcript::MemberNonce<P>::nonce(self) -> coupery_ksnf::signing::NoncePair<P>
+pub const fn coupery_ksnf::transcript::MemberNonce<P>::slot(self) -> coupery_ksnf::types::Slot
+pub struct coupery_ksnf::transcript::MemberOpening<P: coupery_ksnf::profile::Profile>
+impl<P: coupery_ksnf::profile::Profile> coupery_ksnf::transcript::MemberOpening<P>
+pub const fn coupery_ksnf::transcript::MemberOpening<P>::body(&self) -> &coupery_ksnf::transcript::MemberBody<P>
+pub fn coupery_ksnf::transcript::MemberOpening<P>::from_bytes(&[u8], &coupery_ksnf::support::OuterSupport<P>) -> coupery_ksnf::error::Result<Self>
+pub const fn coupery_ksnf::transcript::MemberOpening<P>::new(coupery_ksnf::algebra::SecretScalar<P>, coupery_ksnf::transcript::MemberBody<P>) -> Self
+pub fn coupery_ksnf::transcript::MemberOpening<P>::record(&self) -> coupery_ksnf::error::Result<coupery_ksnf::transcript::MemberRecord<P>>
+pub fn coupery_ksnf::transcript::MemberOpening<P>::sample(coupery_ksnf::transcript::MemberBody<P>, &mut impl rand_core::CryptoRng + rand_core::RngCore) -> Self
+pub fn coupery_ksnf::transcript::MemberOpening<P>::to_bytes(&self) -> coupery_ksnf::error::Result<zeroize::Zeroizing<alloc::vec::Vec<u8>>>
+pub struct coupery_ksnf::transcript::MemberRecord<P: coupery_ksnf::profile::Profile>
+impl<P: coupery_ksnf::profile::Profile> coupery_ksnf::transcript::MemberRecord<P>
+pub fn coupery_ksnf::transcript::MemberRecord<P>::commit(&coupery_ksnf::transcript::MemberBody<P>, &coupery_ksnf::algebra::SecretScalar<P>) -> coupery_ksnf::error::Result<Self>
+pub const fn coupery_ksnf::transcript::MemberRecord<P>::commitment(self) -> coupery_ksnf::algebra::ScalarFor<P>
+pub fn coupery_ksnf::transcript::MemberRecord<P>::from_bytes(&[u8]) -> coupery_ksnf::error::Result<Self>
+pub const fn coupery_ksnf::transcript::MemberRecord<P>::member(self) -> coupery_ksnf::keys::MemberPoint<P>
+pub const fn coupery_ksnf::transcript::MemberRecord<P>::slot(self) -> coupery_ksnf::types::Slot
+pub fn coupery_ksnf::transcript::MemberRecord<P>::to_bytes(self) -> alloc::vec::Vec<u8>
+impl<P: coupery_ksnf::profile::Profile> core::fmt::Debug for coupery_ksnf::transcript::MemberRecord<P>
+pub fn coupery_ksnf::transcript::MemberRecord<P>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub struct coupery_ksnf::transcript::MemberReservation<P: coupery_ksnf::profile::Profile>
+impl<P: coupery_ksnf::profile::Profile> coupery_ksnf::transcript::MemberReservation<P>
+pub const fn coupery_ksnf::transcript::MemberReservation<P>::body(&self) -> &coupery_ksnf::transcript::MemberBody<P>
+pub fn coupery_ksnf::transcript::MemberReservation<P>::from_bytes(&[u8], &coupery_ksnf::support::OuterSupport<P>) -> coupery_ksnf::error::Result<(Self, coupery_ksnf::types::SessionId, u64)>
+pub fn coupery_ksnf::transcript::MemberReservation<P>::new(coupery_ksnf::transcript::RootPrepackage<P>, coupery_ksnf::transcript::MemberOpening<P>, &coupery_ksnf::support::OuterSupport<P>) -> coupery_ksnf::error::Result<Self>
+pub const fn coupery_ksnf::transcript::MemberReservation<P>::prepackage(&self) -> &coupery_ksnf::transcript::RootPrepackage<P>
+pub const fn coupery_ksnf::transcript::MemberReservation<P>::slot(&self) -> coupery_ksnf::types::Slot
+pub fn coupery_ksnf::transcript::MemberReservation<P>::to_bytes(&self, coupery_ksnf::types::SessionId, u64) -> coupery_ksnf::error::Result<zeroize::Zeroizing<alloc::vec::Vec<u8>>>
+pub struct coupery_ksnf::transcript::MemberTranscript<P: coupery_ksnf::profile::Profile>
+impl<P: coupery_ksnf::profile::Profile> coupery_ksnf::transcript::MemberTranscript<P>
+pub const fn coupery_ksnf::transcript::MemberTranscript<P>::body(&self) -> &coupery_ksnf::transcript::MemberBody<P>
+pub fn coupery_ksnf::transcript::MemberTranscript<P>::finalize(coupery_ksnf::transcript::RootPackage<P>, coupery_ksnf::transcript::MemberReservation<P>) -> coupery_ksnf::error::Result<Self>
+pub fn coupery_ksnf::transcript::MemberTranscript<P>::new(coupery_ksnf::transcript::RootPackage<P>, coupery_ksnf::transcript::MemberOpening<P>, &coupery_ksnf::support::OuterSupport<P>) -> coupery_ksnf::error::Result<Self>
+pub const fn coupery_ksnf::transcript::MemberTranscript<P>::root(&self) -> &coupery_ksnf::transcript::RootPackage<P>
+pub const fn coupery_ksnf::transcript::MemberTranscript<P>::slot(&self) -> coupery_ksnf::types::Slot
+pub struct coupery_ksnf::transcript::RootContext
+impl coupery_ksnf::transcript::RootContext
+pub const fn coupery_ksnf::transcript::RootContext::ceremony(self) -> coupery_ksnf::types::CommandId
+pub const fn coupery_ksnf::transcript::RootContext::epoch(self) -> coupery_ksnf::types::OuterEpoch
+pub const fn coupery_ksnf::transcript::RootContext::new(coupery_ksnf::types::VaultId, coupery_ksnf::types::OuterEpoch, coupery_ksnf::types::CommandId) -> Self
+pub const fn coupery_ksnf::transcript::RootContext::vault(self) -> coupery_ksnf::types::VaultId
+pub struct coupery_ksnf::transcript::RootEntry<P: coupery_ksnf::profile::Profile>
+impl<P: coupery_ksnf::profile::Profile> coupery_ksnf::transcript::RootEntry<P>
+pub const fn coupery_ksnf::transcript::RootEntry<P>::new(coupery_ksnf::transcript::MemberRecord<P>, coupery_ksnf::signing::NoncePair<P>) -> Self
+pub const fn coupery_ksnf::transcript::RootEntry<P>::nonce(self) -> coupery_ksnf::signing::NoncePair<P>
+pub const fn coupery_ksnf::transcript::RootEntry<P>::record(self) -> coupery_ksnf::transcript::MemberRecord<P>
+pub struct coupery_ksnf::transcript::RootPackage<P: coupery_ksnf::profile::Profile>
+impl<P: coupery_ksnf::profile::Profile> coupery_ksnf::transcript::RootPackage<P>
+pub const fn coupery_ksnf::transcript::RootPackage<P>::context(&self) -> coupery_ksnf::transcript::RootContext
+pub fn coupery_ksnf::transcript::RootPackage<P>::entries(&self) -> &[coupery_ksnf::transcript::RootEntry<P>]
+pub fn coupery_ksnf::transcript::RootPackage<P>::entry(&self, coupery_ksnf::types::Slot) -> coupery_ksnf::error::Result<coupery_ksnf::transcript::RootEntry<P>>
+pub fn coupery_ksnf::transcript::RootPackage<P>::finalize(coupery_ksnf::transcript::RootPrepackage<P>, &coupery_ksnf::support::OuterSupport<P>, alloc::vec::Vec<coupery_ksnf::transcript::MemberNonce<P>>) -> coupery_ksnf::error::Result<Self>
+pub fn coupery_ksnf::transcript::RootPackage<P>::from_bytes(&[u8]) -> coupery_ksnf::error::Result<Self>
+pub const fn coupery_ksnf::transcript::RootPackage<P>::key(&self) -> coupery_ksnf::keys::VaultKey<P>
+pub fn coupery_ksnf::transcript::RootPackage<P>::message(&self) -> &[u8]
+pub fn coupery_ksnf::transcript::RootPackage<P>::new(coupery_ksnf::keys::VaultKey<P>, alloc::vec::Vec<u8>, coupery_ksnf::transcript::RootContext, &coupery_ksnf::support::OuterSupport<P>, alloc::vec::Vec<coupery_ksnf::transcript::RootEntry<P>>) -> coupery_ksnf::error::Result<Self>
+pub fn coupery_ksnf::transcript::RootPackage<P>::prepackage(&self) -> coupery_ksnf::transcript::RootPrepackage<P>
+pub fn coupery_ksnf::transcript::RootPackage<P>::to_bytes(&self) -> coupery_ksnf::error::Result<alloc::vec::Vec<u8>>
+pub fn coupery_ksnf::transcript::RootPackage<P>::validate_support(&self, &coupery_ksnf::support::OuterSupport<P>) -> coupery_ksnf::error::Result<()>
+pub struct coupery_ksnf::transcript::RootPrepackage<P: coupery_ksnf::profile::Profile>
+impl<P: coupery_ksnf::profile::Profile> coupery_ksnf::transcript::RootPrepackage<P>
+pub const fn coupery_ksnf::transcript::RootPrepackage<P>::context(&self) -> coupery_ksnf::transcript::RootContext
+pub fn coupery_ksnf::transcript::RootPrepackage<P>::from_bytes(&[u8]) -> coupery_ksnf::error::Result<Self>
+pub const fn coupery_ksnf::transcript::RootPrepackage<P>::key(&self) -> coupery_ksnf::keys::VaultKey<P>
+pub fn coupery_ksnf::transcript::RootPrepackage<P>::message(&self) -> &[u8]
+pub fn coupery_ksnf::transcript::RootPrepackage<P>::new(coupery_ksnf::keys::VaultKey<P>, alloc::vec::Vec<u8>, coupery_ksnf::transcript::RootContext, &coupery_ksnf::support::OuterSupport<P>, alloc::vec::Vec<coupery_ksnf::transcript::MemberRecord<P>>) -> coupery_ksnf::error::Result<Self>
+pub fn coupery_ksnf::transcript::RootPrepackage<P>::record(&self, coupery_ksnf::types::Slot) -> coupery_ksnf::error::Result<coupery_ksnf::transcript::MemberRecord<P>>
+pub fn coupery_ksnf::transcript::RootPrepackage<P>::records(&self) -> &[coupery_ksnf::transcript::MemberRecord<P>]
+pub fn coupery_ksnf::transcript::RootPrepackage<P>::to_bytes(&self) -> coupery_ksnf::error::Result<alloc::vec::Vec<u8>>
+pub fn coupery_ksnf::transcript::RootPrepackage<P>::validate_support(&self, &coupery_ksnf::support::OuterSupport<P>) -> coupery_ksnf::error::Result<()>
+pub struct coupery_ksnf::transcript::SigningContext<'a, P: coupery_ksnf::profile::Profile>
+impl<'a, P: coupery_ksnf::profile::Profile> coupery_ksnf::transcript::SigningContext<'a, P>
+pub fn coupery_ksnf::transcript::SigningContext<'a, P>::binding(&self, coupery_ksnf::types::Slot) -> coupery_ksnf::error::Result<coupery_ksnf::algebra::ScalarFor<P>>
+pub const fn coupery_ksnf::transcript::SigningContext<'a, P>::challenge(&self) -> coupery_ksnf::algebra::ScalarFor<P>
+pub fn coupery_ksnf::transcript::SigningContext<'a, P>::new(&'a coupery_ksnf::transcript::RootPackage<P>) -> coupery_ksnf::error::Result<Self>
+pub const fn coupery_ksnf::transcript::SigningContext<'a, P>::nonce(&self) -> coupery_ksnf::algebra::Point<P>
+pub const fn coupery_ksnf::transcript::SigningContext<'a, P>::root(&self) -> &'a coupery_ksnf::transcript::RootPackage<P>
+pub const coupery_ksnf::transcript::PROTOCOL_ID: &[u8]
+pub mod coupery_ksnf::types
+pub struct coupery_ksnf::types::ActivationHandle(_)
+impl coupery_ksnf::types::ActivationHandle
+pub const fn coupery_ksnf::types::ActivationHandle::as_bytes(&self) -> &[u8; 32]
+pub const fn coupery_ksnf::types::ActivationHandle::new([u8; 32]) -> Self
+impl core::fmt::Debug for coupery_ksnf::types::ActivationHandle
+pub fn coupery_ksnf::types::ActivationHandle::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub struct coupery_ksnf::types::BlockId(_)
+impl coupery_ksnf::types::BlockId
+pub const fn coupery_ksnf::types::BlockId::as_bytes(&self) -> &[u8; 32]
+pub const fn coupery_ksnf::types::BlockId::new([u8; 32]) -> Self
+impl core::fmt::Debug for coupery_ksnf::types::BlockId
+pub fn coupery_ksnf::types::BlockId::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub struct coupery_ksnf::types::CommandId(_)
+impl coupery_ksnf::types::CommandId
+pub const fn coupery_ksnf::types::CommandId::as_bytes(&self) -> &[u8; 32]
+pub const fn coupery_ksnf::types::CommandId::new([u8; 32]) -> Self
+impl core::fmt::Debug for coupery_ksnf::types::CommandId
+pub fn coupery_ksnf::types::CommandId::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub struct coupery_ksnf::types::DeviceId(_)
+impl coupery_ksnf::types::DeviceId
+pub const fn coupery_ksnf::types::DeviceId::as_bytes(&self) -> &[u8; 32]
+pub const fn coupery_ksnf::types::DeviceId::new([u8; 32]) -> Self
+impl core::fmt::Debug for coupery_ksnf::types::DeviceId
+pub fn coupery_ksnf::types::DeviceId::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub struct coupery_ksnf::types::InnerEpoch(_)
+impl coupery_ksnf::types::InnerEpoch
+pub const fn coupery_ksnf::types::InnerEpoch::get(self) -> u64
+pub const fn coupery_ksnf::types::InnerEpoch::new(u64) -> Self
+pub struct coupery_ksnf::types::LeafAttempt
+impl coupery_ksnf::types::LeafAttempt
+pub const fn coupery_ksnf::types::LeafAttempt::device(self) -> coupery_ksnf::types::DeviceId
+pub const fn coupery_ksnf::types::LeafAttempt::new(coupery_ksnf::types::DeviceId, u64) -> Self
+pub const fn coupery_ksnf::types::LeafAttempt::sequence(self) -> u64
+pub struct coupery_ksnf::types::OuterEpoch(_)
+impl coupery_ksnf::types::OuterEpoch
+pub const fn coupery_ksnf::types::OuterEpoch::get(self) -> u64
+pub const fn coupery_ksnf::types::OuterEpoch::new(u64) -> Self
+pub struct coupery_ksnf::types::PersonId(_)
+impl coupery_ksnf::types::PersonId
+pub const fn coupery_ksnf::types::PersonId::as_bytes(&self) -> &[u8; 32]
+pub const fn coupery_ksnf::types::PersonId::new([u8; 32]) -> Self
+impl core::fmt::Debug for coupery_ksnf::types::PersonId
+pub fn coupery_ksnf::types::PersonId::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub struct coupery_ksnf::types::ScopeId(_)
+impl coupery_ksnf::types::ScopeId
+pub const fn coupery_ksnf::types::ScopeId::as_bytes(&self) -> &[u8; 32]
+pub const fn coupery_ksnf::types::ScopeId::new([u8; 32]) -> Self
+impl core::fmt::Debug for coupery_ksnf::types::ScopeId
+pub fn coupery_ksnf::types::ScopeId::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub struct coupery_ksnf::types::SessionId(_)
+impl coupery_ksnf::types::SessionId
+pub const fn coupery_ksnf::types::SessionId::as_bytes(&self) -> &[u8; 32]
+pub const fn coupery_ksnf::types::SessionId::new([u8; 32]) -> Self
+impl core::fmt::Debug for coupery_ksnf::types::SessionId
+pub fn coupery_ksnf::types::SessionId::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub struct coupery_ksnf::types::Slot(_)
+impl coupery_ksnf::types::Slot
+pub const fn coupery_ksnf::types::Slot::get(self) -> u16
+pub const fn coupery_ksnf::types::Slot::new(u16) -> Self
+pub struct coupery_ksnf::types::VaultId(_)
+impl coupery_ksnf::types::VaultId
+pub const fn coupery_ksnf::types::VaultId::as_bytes(&self) -> &[u8; 32]
+pub const fn coupery_ksnf::types::VaultId::new([u8; 32]) -> Self
+impl core::fmt::Debug for coupery_ksnf::types::VaultId
+pub fn coupery_ksnf::types::VaultId::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+#[non_exhaustive] pub enum coupery_ksnf::Error
+pub coupery_ksnf::Error::AlreadyTerminal
+pub coupery_ksnf::Error::AttemptClosed
+pub coupery_ksnf::Error::AttemptExhausted
+pub coupery_ksnf::Error::AttemptMismatch
+pub coupery_ksnf::Error::Busy
+pub coupery_ksnf::Error::CoefficientMismatch
+pub coupery_ksnf::Error::CommandMismatch
+pub coupery_ksnf::Error::CommitmentMismatch
+pub coupery_ksnf::Error::DuplicateNode
+pub coupery_ksnf::Error::DuplicateParticipant
+pub coupery_ksnf::Error::DuplicateSlot
+pub coupery_ksnf::Error::EmptyInput
+pub coupery_ksnf::Error::EpochMismatch
+pub coupery_ksnf::Error::Expired
+pub coupery_ksnf::Error::HashToField
+pub coupery_ksnf::Error::IdentityNonce
+pub coupery_ksnf::Error::IdentityPoint
+pub coupery_ksnf::Error::InvalidElementTag
+pub coupery_ksnf::Error::InvalidIdentity
+pub coupery_ksnf::Error::InvalidPartial
+pub coupery_ksnf::Error::InvalidPoint
+pub coupery_ksnf::Error::InvalidScalar
+pub coupery_ksnf::Error::InvalidSighash
+pub coupery_ksnf::Error::InvalidSignature
+pub coupery_ksnf::Error::InvalidTranscript
+pub coupery_ksnf::Error::InvalidTweak
+pub coupery_ksnf::Error::LengthMismatch
+pub coupery_ksnf::Error::LengthOverflow
+pub coupery_ksnf::Error::NonceMismatch
+pub coupery_ksnf::Error::OutputKeyMismatch
+pub coupery_ksnf::Error::ParticipantMismatch
+pub coupery_ksnf::Error::ParticipantNotFound
+pub coupery_ksnf::Error::PhaseClosed
+pub coupery_ksnf::Error::ProtocolMismatch
+pub coupery_ksnf::Error::ReceiverMismatch
+pub coupery_ksnf::Error::ReplayMismatch
+pub coupery_ksnf::Error::ShareMismatch
+pub coupery_ksnf::Error::StalePredecessor
+pub coupery_ksnf::Error::SupportMismatch
+pub coupery_ksnf::Error::TrailingBytes
+pub coupery_ksnf::Error::TrailingBytes::offset: usize
+pub coupery_ksnf::Error::UnexpectedEnd
+pub coupery_ksnf::Error::UnexpectedEnd::needed: usize
+pub coupery_ksnf::Error::UnexpectedEnd::offset: usize
+pub coupery_ksnf::Error::UnsupportedVersion
+pub coupery_ksnf::Error::WrongStage
+pub coupery_ksnf::Error::ZeroNode
+pub coupery_ksnf::Error::ZeroNonce
+impl coupery_ksnf::error::Error
+pub const fn coupery_ksnf::error::Error::code(self) -> &'static str
+impl core::error::Error for coupery_ksnf::error::Error
+impl core::fmt::Display for coupery_ksnf::error::Error
+pub fn coupery_ksnf::error::Error::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl<E> core::convert::From<coupery_ksnf::error::Error> for coupery_ksnf::leaf::PersistError<E>
+pub fn coupery_ksnf::leaf::PersistError<E>::from(coupery_ksnf::error::Error) -> Self
+pub enum coupery_ksnf::ExposureViolation
+pub coupery_ksnf::ExposureViolation::ActivatedEpoch
+pub coupery_ksnf::ExposureViolation::ActivatedEpoch::controlled: usize
+pub coupery_ksnf::ExposureViolation::ActivatedEpoch::epoch: coupery_ksnf::types::OuterEpoch
+pub coupery_ksnf::ExposureViolation::ActivatedEpoch::limit: usize
+pub coupery_ksnf::ExposureViolation::ActivatedEpoch::vault: coupery_ksnf::types::VaultId
+pub coupery_ksnf::ExposureViolation::MemberCandidate
+pub coupery_ksnf::ExposureViolation::MemberCandidate::command: coupery_ksnf::types::CommandId
+pub coupery_ksnf::ExposureViolation::MemberCandidate::person: coupery_ksnf::types::PersonId
+pub coupery_ksnf::ExposureViolation::OuterCandidate
+pub coupery_ksnf::ExposureViolation::OuterCandidate::command: coupery_ksnf::types::CommandId
+pub coupery_ksnf::ExposureViolation::OuterCandidate::controlled: usize
+pub coupery_ksnf::ExposureViolation::OuterCandidate::limit: usize
+pub struct coupery_ksnf::ExposureLedger
+impl coupery_ksnf::exposure::ExposureLedger
+pub fn coupery_ksnf::exposure::ExposureLedger::audit(&self) -> alloc::vec::Vec<coupery_ksnf::exposure::ExposureViolation>
+pub fn coupery_ksnf::exposure::ExposureLedger::expose_member_candidate(&mut self, coupery_ksnf::types::CommandId, coupery_ksnf::types::BlockId, &coupery_ksnf::exposure::TargetGroup) -> coupery_ksnf::error::Result<()>
+pub fn coupery_ksnf::exposure::ExposureLedger::expose_outer_candidate(&mut self, coupery_ksnf::types::CommandId, u16, &[coupery_ksnf::exposure::TargetGroup]) -> coupery_ksnf::error::Result<()>
+pub fn coupery_ksnf::exposure::ExposureLedger::new(impl core::iter::traits::collect::IntoIterator<Item = coupery_ksnf::types::DeviceId>) -> Self
+pub fn coupery_ksnf::exposure::ExposureLedger::register_epoch(&mut self, coupery_ksnf::types::VaultId, coupery_ksnf::types::OuterEpoch, u16, alloc::vec::Vec<coupery_ksnf::exposure::MemberBlockSpec>) -> coupery_ksnf::error::Result<()>
+pub fn coupery_ksnf::exposure::ExposureLedger::reveal(&mut self, coupery_ksnf::types::BlockId, coupery_ksnf::types::DeviceId) -> coupery_ksnf::error::Result<()>
+pub struct coupery_ksnf::MemberBlockSpec
+impl coupery_ksnf::exposure::MemberBlockSpec
+pub const fn coupery_ksnf::exposure::MemberBlockSpec::block(&self) -> coupery_ksnf::types::BlockId
+pub fn coupery_ksnf::exposure::MemberBlockSpec::new(coupery_ksnf::types::BlockId, coupery_ksnf::types::PersonId, u16, alloc::vec::Vec<coupery_ksnf::types::DeviceId>) -> coupery_ksnf::error::Result<Self>
+pub const fn coupery_ksnf::exposure::MemberBlockSpec::person(&self) -> coupery_ksnf::types::PersonId
+pub struct coupery_ksnf::TargetGroup
+impl coupery_ksnf::exposure::TargetGroup
+pub fn coupery_ksnf::exposure::TargetGroup::new(coupery_ksnf::types::PersonId, u16, alloc::vec::Vec<coupery_ksnf::types::DeviceId>) -> coupery_ksnf::error::Result<Self>
+pub const fn coupery_ksnf::exposure::TargetGroup::person(&self) -> coupery_ksnf::types::PersonId
+pub trait coupery_ksnf::LogAct
+pub fn coupery_ksnf::LogAct::abort(&mut self, coupery_ksnf::types::CommandId) -> coupery_ksnf::error::Result<coupery_ksnf::log_act::Terminal>
+pub fn coupery_ksnf::LogAct::activate(&mut self, coupery_ksnf::types::CommandId) -> coupery_ksnf::error::Result<coupery_ksnf::log_act::Terminal>
+pub fn coupery_ksnf::LogAct::activate_bundle(&mut self, &[coupery_ksnf::types::CommandId]) -> coupery_ksnf::error::Result<coupery_ksnf::log_act::Terminal>
+pub fn coupery_ksnf::LogAct::begin(&mut self, coupery_ksnf::types::ScopeId, coupery_ksnf::types::CommandId, coupery_ksnf::types::ActivationHandle, &[u8]) -> coupery_ksnf::error::Result<()>
+pub fn coupery_ksnf::LogAct::close_phase(&mut self, coupery_ksnf::types::CommandId, coupery_ksnf::log_act::LogPhase) -> coupery_ksnf::error::Result<()>
+pub fn coupery_ksnf::LogAct::current(&self, coupery_ksnf::types::ScopeId) -> core::option::Option<coupery_ksnf::types::ActivationHandle>
+pub fn coupery_ksnf::LogAct::post(&mut self, coupery_ksnf::types::CommandId, coupery_ksnf::log_act::LogPhase, &[u8], &[u8]) -> coupery_ksnf::error::Result<()>
+impl coupery_ksnf::log_act::LogAct for coupery_ksnf::log_act::MemoryLog
+pub fn coupery_ksnf::log_act::MemoryLog::abort(&mut self, coupery_ksnf::types::CommandId) -> coupery_ksnf::error::Result<coupery_ksnf::log_act::Terminal>
+pub fn coupery_ksnf::log_act::MemoryLog::activate(&mut self, coupery_ksnf::types::CommandId) -> coupery_ksnf::error::Result<coupery_ksnf::log_act::Terminal>
+pub fn coupery_ksnf::log_act::MemoryLog::activate_bundle(&mut self, &[coupery_ksnf::types::CommandId]) -> coupery_ksnf::error::Result<coupery_ksnf::log_act::Terminal>
+pub fn coupery_ksnf::log_act::MemoryLog::begin(&mut self, coupery_ksnf::types::ScopeId, coupery_ksnf::types::CommandId, coupery_ksnf::types::ActivationHandle, &[u8]) -> coupery_ksnf::error::Result<()>
+pub fn coupery_ksnf::log_act::MemoryLog::close_phase(&mut self, coupery_ksnf::types::CommandId, coupery_ksnf::log_act::LogPhase) -> coupery_ksnf::error::Result<()>
+pub fn coupery_ksnf::log_act::MemoryLog::current(&self, coupery_ksnf::types::ScopeId) -> core::option::Option<coupery_ksnf::types::ActivationHandle>
+pub fn coupery_ksnf::log_act::MemoryLog::post(&mut self, coupery_ksnf::types::CommandId, coupery_ksnf::log_act::LogPhase, &[u8], &[u8]) -> coupery_ksnf::error::Result<()>
+pub type coupery_ksnf::Result<T> = core::result::Result<T, coupery_ksnf::error::Error>

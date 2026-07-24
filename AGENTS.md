@@ -12,8 +12,12 @@ other cryptographic applications.
 
 - Keep modules small and orthogonal.
 - Pass state through typed values. Avoid hidden state.
-- Keep transport, storage, policy, DKG, BIP-340, Taproot, and recursive depth
-  outside the core.
+- Keep long-lived signer state fixed-size or proportional to active keys. Stream
+  history to application-owned storage.
+- Keep transport, storage engines, policy, DKG, and recursive depth outside the
+  core. Keep the leaf-store contract in the crate.
+- Keep BIP-340 and Taproot inside the `taproot` adapter. Plain modules must not
+  depend on it.
 - Depend on public crates only. Do not depend on Sudo.
 - Preserve the theorem boundary in every API claim.
 

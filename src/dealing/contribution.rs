@@ -1,36 +1,38 @@
-use k256::elliptic_curve::Field as _;
-use zeroize::{Zeroize, ZeroizeOnDrop};
+use frost_core::{Field, Group};
 
-use crate::algebra::{Element, Scalar, SecretScalar};
+use crate::algebra::{Element, ScalarFor, SecretScalar};
 use crate::encoding::{Decoder, Encoder};
 use crate::hash::{self, Domain};
+use crate::profile::{DefaultProfile, Profile};
 use crate::shamir::{Node, Polynomial};
 use crate::types::{CommandId, DeviceId, PersonId};
 use crate::{Error, Result};
 
-use super::{Command, RoleId, RoleSpec, TargetId, TargetShape, VERSION, count_u16, expect_version};
+use super::{Command, RoleId, RoleSpec, TargetId, TargetShape, count_u16, expect_version};
+
+type FieldOf<P> = <<P as Profile>::Group as Group>::Field;
 
 /// Public coefficient points for one contribution.
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub enum ContributionPoints {
+pub enum ContributionPoints<P: Profile = DefaultProfile> {
     /// One polynomial.
-    Single(Vec<Element>),
+    Single(Vec<Element<P>>),
     /// One outer polynomial and linked inner polynomials.
     Outer {
         /// Outer coefficient points.
-        outer: Vec<Element>,
+        outer: Vec<Element<P>>,
         /// Inner coefficient points sorted by person.
-        members: Vec<(PersonId, Vec<Element>)>,
+        members: Vec<(PersonId, Vec<Element<P>>)>,
     },
 }
 
-impl ContributionPoints {
+impl<P: Profile> ContributionPoints<P> {
     /// Returns the anchored constant element.
     ///
     /// # Errors
     ///
     /// Returns [`Error::EmptyInput`] when a received point vector is empty.
-    pub fn constant(&self) -> Result<Element> {
+    pub fn constant(&self) -> Result<Element<P>> {
         match self {
             Self::Single(points) | Self::Outer { outer: points, .. } => {
                 points.first().copied().ok_or(Error::EmptyInput)
@@ -44,7 +46,7 @@ impl ContributionPoints {
     ///
     /// Returns an error when the points are not outer points or the person is
     /// absent.
-    pub fn member_constant(&self, person: PersonId) -> Result<Element> {
+    pub fn member_constant(&self, person: PersonId) -> Result<Element<P>> {
         let Self::Outer { members, .. } = self else {
             return Err(Error::SupportMismatch);
         };
@@ -61,7 +63,7 @@ impl ContributionPoints {
     ///
     /// Returns an error when the points differ from the command shape or
     /// required constant.
-    pub fn validate(&self, shape: &TargetShape, constant: Element) -> Result<()> {
+    pub fn validate(&self, shape: &TargetShape<P>, constant: Element<P>) -> Result<()> {
         match (self, shape) {
             (Self::Single(points), TargetShape::Single(target)) => {
                 if points.len() != usize::from(target.threshold())
@@ -98,8 +100,8 @@ impl ContributionPoints {
     ///
     /// Returns [`Error::LengthOverflow`] for oversized collections.
     pub fn to_bytes(&self) -> Result<Vec<u8>> {
-        let mut encoder = Encoder::new();
-        encoder.put_u8(VERSION);
+        let mut encoder = Encoder::<P>::for_profile();
+        encoder.put_u8(P::WIRE_ID);
         match self {
             Self::Single(points) => {
                 encoder.put_u8(0);
@@ -124,7 +126,7 @@ impl ContributionPoints {
     ///
     /// Returns an error for malformed, empty, unsorted, or trailing data.
     pub fn from_bytes(bytes: &[u8]) -> Result<Self> {
-        let mut decoder = Decoder::new(bytes);
+        let mut decoder = Decoder::<P>::for_profile(bytes);
         expect_version(&mut decoder)?;
         let points = match decoder.get_u8()? {
             0 => Self::Single(decode_points(&mut decoder)?),
@@ -152,7 +154,7 @@ impl ContributionPoints {
         Ok(points)
     }
 
-    pub(crate) fn evaluate(&self, shape: &TargetShape, target: TargetId) -> Result<Element> {
+    pub(crate) fn evaluate(&self, shape: &TargetShape<P>, target: TargetId) -> Result<Element<P>> {
         let node = shape.target_node(target)?;
         match (self, target) {
             (Self::Single(points), TargetId::Single(_)) => Ok(evaluate_points(points, node)),
@@ -200,17 +202,17 @@ impl ContributionPoints {
 }
 
 /// An opened contribution.
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct Opening {
+#[derive(Clone, Eq, PartialEq)]
+pub struct Opening<P: Profile = DefaultProfile> {
     pub(super) role: RoleId,
-    pub(super) points: ContributionPoints,
-    pub(super) salt: Scalar,
+    pub(super) points: ContributionPoints<P>,
+    pub(super) salt: ScalarFor<P>,
 }
 
-impl Opening {
+impl<P: Profile> Opening<P> {
     /// Creates a received opening for validation.
     #[must_use]
-    pub const fn new(role: RoleId, points: ContributionPoints, salt: Scalar) -> Self {
+    pub const fn new(role: RoleId, points: ContributionPoints<P>, salt: ScalarFor<P>) -> Self {
         Self { role, points, salt }
     }
 
@@ -222,13 +224,13 @@ impl Opening {
 
     /// Returns the public coefficient points.
     #[must_use]
-    pub const fn points(&self) -> &ContributionPoints {
+    pub const fn points(&self) -> &ContributionPoints<P> {
         &self.points
     }
 
     /// Returns the public commitment salt.
     #[must_use]
-    pub const fn salt(&self) -> Scalar {
+    pub const fn salt(&self) -> ScalarFor<P> {
         self.salt
     }
 
@@ -238,8 +240,8 @@ impl Opening {
     ///
     /// Returns [`Error::LengthOverflow`] for oversized point vectors.
     pub fn to_bytes(&self) -> Result<Vec<u8>> {
-        let mut encoder = Encoder::new();
-        encoder.put_u8(VERSION);
+        let mut encoder = Encoder::<P>::for_profile();
+        encoder.put_u8(P::WIRE_ID);
         self.role.encode(&mut encoder);
         encoder.put_bytes(&self.points.to_bytes()?)?;
         encoder.put_scalar(&self.salt);
@@ -252,7 +254,7 @@ impl Opening {
     ///
     /// Returns an error for malformed or trailing data.
     pub fn from_bytes(bytes: &[u8]) -> Result<Self> {
-        let mut decoder = Decoder::new(bytes);
+        let mut decoder = Decoder::<P>::for_profile(bytes);
         expect_version(&mut decoder)?;
         let role = RoleId::decode(&mut decoder)?;
         let opening = Self {
@@ -264,27 +266,33 @@ impl Opening {
         Ok(opening)
     }
 
-    pub(super) fn commitment(&self, command: &Command) -> Result<Scalar> {
+    pub(super) fn commitment(&self, command: &Command<P>) -> Result<ScalarFor<P>> {
         contribution_commitment(command, self.role, &self.points, self.salt)
     }
 }
 
-/// One private scalar delivery to a target.
-#[derive(Zeroize, ZeroizeOnDrop)]
-pub struct PrivateShare {
-    #[zeroize(skip)]
-    pub(super) command: CommandId,
-    #[zeroize(skip)]
-    pub(super) role: RoleId,
-    #[zeroize(skip)]
-    pub(super) target: TargetId,
-    pub(super) value: Scalar,
+impl<P: Profile> core::fmt::Debug for Opening<P> {
+    fn fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        formatter
+            .debug_struct("Opening")
+            .field("role", &self.role)
+            .field("points", &self.points)
+            .finish_non_exhaustive()
+    }
 }
 
-impl PrivateShare {
+/// One private scalar delivery to a target.
+pub struct PrivateShare<P: Profile = DefaultProfile> {
+    pub(super) command: CommandId,
+    pub(super) role: RoleId,
+    pub(super) target: TargetId,
+    pub(super) value: ScalarFor<P>,
+}
+
+impl<P: Profile> PrivateShare<P> {
     /// Creates a private delivery after channel authentication.
     #[must_use]
-    pub fn new(command: CommandId, role: RoleId, target: TargetId, value: SecretScalar) -> Self {
+    pub fn new(command: CommandId, role: RoleId, target: TargetId, value: SecretScalar<P>) -> Self {
         let scalar = value.expose(|scalar| *scalar);
         drop(value);
         Self {
@@ -314,12 +322,12 @@ impl PrivateShare {
     }
 
     /// Borrows the scalar for one operation.
-    pub fn expose<T>(&self, use_share: impl FnOnce(&Scalar) -> T) -> T {
+    pub fn expose<T>(&self, use_share: impl FnOnce(&ScalarFor<P>) -> T) -> T {
         use_share(&self.value)
     }
 }
 
-impl core::fmt::Debug for PrivateShare {
+impl<P: Profile> core::fmt::Debug for PrivateShare<P> {
     fn fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         formatter
             .debug_struct("PrivateShare")
@@ -331,17 +339,23 @@ impl core::fmt::Debug for PrivateShare {
     }
 }
 
-/// One unopened local contribution.
-pub struct Contribution {
-    command: CommandId,
-    role: RoleId,
-    block: SecretBlock,
-    points: ContributionPoints,
-    salt: SecretScalar,
-    commitment: Scalar,
+impl<P: Profile> Drop for PrivateShare<P> {
+    fn drop(&mut self) {
+        P::clear_scalar(&mut self.value);
+    }
 }
 
-impl Contribution {
+/// One unopened local contribution.
+pub struct Contribution<P: Profile = DefaultProfile> {
+    command: CommandId,
+    role: RoleId,
+    block: SecretBlock<P>,
+    points: ContributionPoints<P>,
+    salt: SecretScalar<P>,
+    commitment: ScalarFor<P>,
+}
+
+impl<P: Profile> Contribution<P> {
     /// Samples a weighted source contribution.
     ///
     /// # Errors
@@ -349,9 +363,9 @@ impl Contribution {
     /// Returns an error when the source share differs from the command or
     /// contribution sampling fails.
     pub fn source(
-        command: &Command,
+        command: &Command<P>,
         device: DeviceId,
-        source_share: &SecretScalar,
+        source_share: &SecretScalar<P>,
         rng: &mut (impl rand_core::CryptoRng + rand_core::RngCore),
     ) -> Result<Self> {
         let spec = command.role(RoleId::Source(device))?;
@@ -370,12 +384,12 @@ impl Contribution {
     ///
     /// Returns an error when the role is absent or sampling fails.
     pub fn refresher(
-        command: &Command,
+        command: &Command<P>,
         device: DeviceId,
         rng: &mut (impl rand_core::CryptoRng + rand_core::RngCore),
     ) -> Result<Self> {
         let spec = command.role(RoleId::Refresher(device))?;
-        Self::sample(command, spec, &SecretScalar::new(Scalar::ZERO), rng)
+        Self::sample(command, spec, &SecretScalar::new(FieldOf::<P>::zero()), rng)
     }
 
     /// Returns the role identifier.
@@ -386,13 +400,11 @@ impl Contribution {
 
     /// Returns the commitment scalar.
     #[must_use]
-    pub const fn commitment(&self) -> Scalar {
+    pub const fn commitment(&self) -> ScalarFor<P> {
         self.commitment
     }
 
-    /// Opens the public coefficient points and salt.
-    #[must_use]
-    pub fn opening(&self) -> Opening {
+    pub(crate) fn opening(&self) -> Opening<P> {
         Opening {
             role: self.role,
             points: self.points.clone(),
@@ -400,12 +412,7 @@ impl Contribution {
         }
     }
 
-    /// Creates one authenticated private delivery payload.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error when the target is absent.
-    pub fn share(&self, command: &Command, target: TargetId) -> Result<PrivateShare> {
+    pub(crate) fn share(&self, command: &Command<P>, target: TargetId) -> Result<PrivateShare<P>> {
         if self.command != command.command {
             return Err(Error::CommandMismatch);
         }
@@ -418,9 +425,9 @@ impl Contribution {
     }
 
     fn sample(
-        command: &Command,
-        spec: &RoleSpec,
-        constant: &SecretScalar,
+        command: &Command<P>,
+        spec: &RoleSpec<P>,
+        constant: &SecretScalar<P>,
         rng: &mut (impl rand_core::CryptoRng + rand_core::RngCore),
     ) -> Result<Self> {
         if Element::from_scalar(constant.expose(|value| *value)) != spec.constant {
@@ -429,7 +436,7 @@ impl Contribution {
         let block = SecretBlock::sample(command.shape(), constant, rng)?;
         let points = block.points();
         points.validate(command.shape(), spec.constant)?;
-        let salt = SecretScalar::new(Scalar::random(&mut *rng));
+        let salt = SecretScalar::new(FieldOf::<P>::random(&mut *rng));
         let commitment =
             salt.expose(|salt| contribution_commitment(command, spec.role, &points, *salt))?;
         Ok(Self {
@@ -443,18 +450,44 @@ impl Contribution {
     }
 }
 
-enum SecretBlock {
-    Single(Polynomial),
+/// A contribution whose opening reached the current common transcript.
+pub struct ReleasedContribution<'a, P: Profile = DefaultProfile> {
+    contribution: &'a Contribution<P>,
+}
+
+impl<'a, P: Profile> ReleasedContribution<'a, P> {
+    pub(super) const fn new(contribution: &'a Contribution<P>) -> Self {
+        Self { contribution }
+    }
+
+    /// Returns the accepted opening.
+    #[must_use]
+    pub fn opening(&self) -> Opening<P> {
+        self.contribution.opening()
+    }
+
+    /// Creates one private target delivery.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the command or target differs.
+    pub fn share(&self, command: &Command<P>, target: TargetId) -> Result<PrivateShare<P>> {
+        self.contribution.share(command, target)
+    }
+}
+
+enum SecretBlock<P: Profile = DefaultProfile> {
+    Single(Polynomial<P>),
     Outer {
-        outer: Polynomial,
-        members: Vec<(PersonId, Polynomial)>,
+        outer: Polynomial<P>,
+        members: Vec<(PersonId, Polynomial<P>)>,
     },
 }
 
-impl SecretBlock {
+impl<P: Profile> SecretBlock<P> {
     fn sample(
-        shape: &TargetShape,
-        constant: &SecretScalar,
+        shape: &TargetShape<P>,
+        constant: &SecretScalar<P>,
         rng: &mut (impl rand_core::CryptoRng + rand_core::RngCore),
     ) -> Result<Self> {
         match shape {
@@ -482,7 +515,7 @@ impl SecretBlock {
         }
     }
 
-    fn points(&self) -> ContributionPoints {
+    fn points(&self) -> ContributionPoints<P> {
         match self {
             Self::Single(polynomial) => ContributionPoints::Single(polynomial.commitments()),
             Self::Outer { outer, members } => ContributionPoints::Outer {
@@ -495,7 +528,7 @@ impl SecretBlock {
         }
     }
 
-    fn evaluate(&self, shape: &TargetShape, target: TargetId) -> Result<Scalar> {
+    fn evaluate(&self, shape: &TargetShape<P>, target: TargetId) -> Result<ScalarFor<P>> {
         let node = shape.target_node(target)?;
         match (self, target) {
             (Self::Single(polynomial), TargetId::Single(_)) => {
@@ -513,23 +546,25 @@ impl SecretBlock {
     }
 }
 
-fn contribution_commitment(
-    command: &Command,
+fn contribution_commitment<P: Profile>(
+    command: &Command<P>,
     role: RoleId,
-    points: &ContributionPoints,
-    salt: Scalar,
-) -> Result<Scalar> {
-    let mut encoder = Encoder::new();
-    encoder.put_u8(VERSION);
+    points: &ContributionPoints<P>,
+    salt: ScalarFor<P>,
+) -> Result<ScalarFor<P>> {
+    let mut encoder = Encoder::<P>::for_profile();
+    encoder.put_u8(P::WIRE_ID);
     encoder.put_bytes(b"deal")?;
     encoder.put_bytes(&command.to_bytes()?)?;
     role.encode(&mut encoder);
     encoder.put_bytes(&points.to_bytes()?)?;
     encoder.put_scalar(&salt);
-    hash::to_scalar(Domain::Deal, &encoder.finish())
+    hash::to_scalar_for::<P>(Domain::Deal, &encoder.finish())
 }
 
-pub(super) fn aggregate_points(openings: &[Opening]) -> Result<ContributionPoints> {
+pub(super) fn aggregate_points<P: Profile>(
+    openings: &[Opening<P>],
+) -> Result<ContributionPoints<P>> {
     let (first, rest) = openings.split_first().ok_or(Error::EmptyInput)?;
     let mut aggregate = first.points.clone();
     for opening in rest {
@@ -538,16 +573,16 @@ pub(super) fn aggregate_points(openings: &[Opening]) -> Result<ContributionPoint
     Ok(aggregate)
 }
 
-fn evaluate_points(points: &[Element], node: Node) -> Element {
+fn evaluate_points<P: Profile>(points: &[Element<P>], node: Node<P>) -> Element<P> {
     points
         .iter()
         .rev()
-        .fold(Element::IDENTITY, |value, coefficient| {
+        .fold(Element::identity(), |value, coefficient| {
             value * node.scalar() + *coefficient
         })
 }
 
-fn add_points(left: &mut [Element], right: &[Element]) -> Result<()> {
+fn add_points<P: Profile>(left: &mut [Element<P>], right: &[Element<P>]) -> Result<()> {
     if left.len() != right.len() {
         return Err(Error::LengthMismatch);
     }
@@ -557,7 +592,7 @@ fn add_points(left: &mut [Element], right: &[Element]) -> Result<()> {
     Ok(())
 }
 
-fn encode_points(encoder: &mut Encoder, points: &[Element]) -> Result<()> {
+fn encode_points<P: Profile>(encoder: &mut Encoder<P>, points: &[Element<P>]) -> Result<()> {
     encoder.put_u16(count_u16(points.len())?);
     for point in points {
         encoder.put_element(*point);
@@ -565,7 +600,7 @@ fn encode_points(encoder: &mut Encoder, points: &[Element]) -> Result<()> {
     Ok(())
 }
 
-fn decode_points(decoder: &mut Decoder<'_>) -> Result<Vec<Element>> {
+fn decode_points<P: Profile>(decoder: &mut Decoder<'_, P>) -> Result<Vec<Element<P>>> {
     let count = usize::from(decoder.get_u16()?);
     if count == 0 {
         return Err(Error::EmptyInput);

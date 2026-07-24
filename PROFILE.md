@@ -1,6 +1,7 @@
-# KSNF v1 profile
+# secp256k1 profile
 
-The paper is group-generic. Version 1 fixes one byte profile.
+This document fixes `coupery-ksnf/v1`, the original secp256k1 byte profile.
+[`ED25519.md`](ED25519.md) fixes the independent Ed25519 profile.
 
 ## Group
 
@@ -19,6 +20,7 @@ zero. Keys and nonce points use `Point`.
 |---|---|
 | Version | `u8`, value `1` |
 | Identifier or activation handle | 32 fixed bytes |
+| Leaf attempt | `device_id || u64(sequence)` |
 | Slot or collection count | big-endian `u16` |
 | Byte string | big-endian `u32` length, then bytes |
 | Epoch or expiry | big-endian `u64` |
@@ -28,8 +30,8 @@ zero. Keys and nonce points use `Point`.
 
 Structured protocol objects start with version `1`. The plain Schnorr
 signature is the exception: `R_compressed || z`, 65 bytes, with no version
-byte. A device response is `1 || device_id || z`, 65 bytes. A member response
-is `1 || slot || z`, 35 bytes.
+byte. A device response is `1 || device_id || sequence || z`, 73 bytes. A
+member response is `1 || slot || z`, 35 bytes.
 
 Maps and sets sort by their encoded keys and reject duplicates. Decoders reject
 unknown versions, unknown tags, noncanonical scalars, alternate identity
@@ -48,6 +50,8 @@ byte. `*` repeats the prior term by the preceding count.
 key_epoch =
     u64(outer_epoch) || u64(inner_epoch) || vault_id || person_id
     || identity_handle || member_handle
+
+leaf_attempt = device_id || u64(sequence)
 
 device_row =
     device_id || scalar(node) || element(share) || scalar(inner_coefficient)
@@ -80,7 +84,7 @@ member_reservation =
     v || bytes(root_prepackage) || u16(slot) || bytes(member_opening)
     || session_id || u64(expiry)
 
-device_response = v || device_id || scalar(response)
+device_response = v || leaf_attempt || scalar(response)
 member_response = v || u16(slot) || scalar(response)
 signature = point(aggregate_nonce) || scalar(response)
 ```
@@ -147,19 +151,26 @@ the message kind.
 
 ```text
 view_prefix =
-    v || receiver_device_id || session_id || bytes(member_reservation)
+    v || receiver_leaf_attempt || session_id || bytes(member_reservation)
     || u16(sender_count)
 
 commitment_view =
-    view_prefix || (sender_device_id || scalar(commitment))*
+    view_prefix || (sender_leaf_attempt || scalar(commitment))*
 
 opening_view =
-    view_prefix || (sender_device_id || point(hiding_nonce)
+    view_prefix || (sender_leaf_attempt || point(hiding_nonce)
     || point(binding_nonce))*
 ```
 
 Senders use ascending device identifiers. Each receiver may hold a different
-valid view.
+valid view. The authenticated delivery binds both leaf attempts, the session,
+the reservation, and the message kind.
+
+Each device issues leaf attempts in ascending sequence order. It durably
+advances the sequence and marks the attempt live before creating a nonce. A
+closed attempt never becomes live again. A later try for the same ceremony
+uses a new attempt. `SessionId` names the ceremony; `LeafAttempt` is the
+device-local one-use slot that refines the paper's leaf tombstone.
 
 ## Hashes
 
@@ -175,7 +186,7 @@ KSNF/v1/challenge
 ```
 
 Commitments, binding factors, and challenges use the scalar's canonical
-32-byte encoding. [`tests/primitives.rs`](tests/primitives.rs) fixes one output
+32-byte encoding. The unit test in [`src/hash.rs`](src/hash.rs) fixes one output
 for every domain.
 
 Their preimages are:
@@ -188,7 +199,7 @@ deal =
 member = v || bytes("member") || scalar(salt) || bytes(member_body)
 
 nonce =
-    v || bytes("nonce") || device_id || bytes(member_reservation)
+    v || bytes("nonce") || leaf_attempt || bytes(member_reservation)
     || point(hiding_nonce) || point(binding_nonce)
 
 bind = v || bytes(root_package) || u16(zero_based_entry_index)
@@ -201,7 +212,38 @@ challenge =
 
 Version 1 uses plain Schnorr. It does not apply x-only encoding, even-Y key or
 nonce normalization, nonce negation, or a Taproot tweak. Such a transform
-needs its own proof and vector version.
+needs its own proof and vector version. [`TAPROOT.md`](TAPROOT.md) specifies the
+separate key-path adapter.
 
 The JSON files under [`test-vectors/`](test-vectors/) annotate canonical
 bytes. JSON itself is not protocol syntax.
+
+`LeafMaterial` and `LeafJournal` use separate versioned storage encodings.
+They are not signed protocol messages and do not change the v1 byte profile.
+See [`STORAGE.md`](STORAGE.md).
+
+## Profile checklist
+
+Every proposed profile must fix the items below before code lands.
+
+| Item | Required decision |
+|---|---|
+| Group | Prime-order group, scalar field, generator, and security assumptions |
+| Hash suite | Hash-to-field construction and every domain string |
+| Scalars | Canonical width, byte order, range checks, and zero rules |
+| Points | Canonical encoding, identity handling, and subgroup checks |
+| Elements | Encoding for identity-capable commitment and share values |
+| Nodes | Node derivation, nonzero rule, uniqueness rule, and canonical support order |
+| Objects | Version byte, protocol identifier, field grammar, map order, and duplicate policy |
+| Signing | Nonce binding, challenge preimage, response equations, and signature encoding |
+| Adapters | Key and nonce normalization, tweaks, extra messages, and separate proof status |
+| Vectors | New directory, positive paths, refusal paths, partials, final signatures, and immutable digests |
+| Review | Proof mapping and an independent implementation or verifier |
+
+A curve change is a reviewed upstream profile, not a downstream fork that
+silently replaces the algebra. The Ed25519 profile follows this process and
+has its own proof mapping and vectors. Adapter coverage is stated separately
+from each plain theorem.
+
+See [`CONFORMANCE.md`](CONFORMANCE.md) for the release rule and certification
+checks.

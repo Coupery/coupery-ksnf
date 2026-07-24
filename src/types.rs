@@ -5,7 +5,7 @@ use core::fmt;
 macro_rules! id_type {
     ($(#[$meta:meta])* $name:ident) => {
         $(#[$meta])*
-        #[derive(Clone, Copy, Eq, Ord, PartialEq, PartialOrd)]
+        #[derive(Clone, Copy, Eq, Hash, Ord, PartialEq, PartialOrd)]
         pub struct $name([u8; 32]);
 
         impl $name {
@@ -51,7 +51,7 @@ id_type!(
     CommandId
 );
 id_type!(
-    /// An exact installed-transcript handle.
+    /// An exact injective handle for one installed transcript or bundle.
     ActivationHandle
 );
 id_type!(
@@ -63,8 +63,35 @@ id_type!(
     BlockId
 );
 
+/// One device-issued signing attempt.
+#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub struct LeafAttempt {
+    device: DeviceId,
+    sequence: u64,
+}
+
+impl LeafAttempt {
+    /// Creates an attempt from its device and sequence.
+    #[must_use]
+    pub const fn new(device: DeviceId, sequence: u64) -> Self {
+        Self { device, sequence }
+    }
+
+    /// Returns the issuing device.
+    #[must_use]
+    pub const fn device(self) -> DeviceId {
+        self.device
+    }
+
+    /// Returns the device-local sequence.
+    #[must_use]
+    pub const fn sequence(self) -> u64 {
+        self.sequence
+    }
+}
+
 /// An outer sharing epoch.
-#[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct OuterEpoch(u64);
 
 impl OuterEpoch {
@@ -82,7 +109,7 @@ impl OuterEpoch {
 }
 
 /// An inner sharing epoch.
-#[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct InnerEpoch(u64);
 
 impl InnerEpoch {
@@ -100,7 +127,7 @@ impl InnerEpoch {
 }
 
 /// A person's canonical position in an outer package.
-#[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Slot(u16);
 
 impl Slot {

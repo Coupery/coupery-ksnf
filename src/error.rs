@@ -16,6 +16,8 @@ pub enum Error {
     IdentityPoint,
     /// A scalar encoding is not canonical.
     InvalidScalar,
+    /// A Taproot tweak is outside the scalar field.
+    InvalidTweak,
     /// A group-element tag is unknown.
     InvalidElementTag,
     /// An identity encoding has nonzero padding.
@@ -36,7 +38,7 @@ pub enum Error {
     LengthOverflow,
     /// A polynomial or support is empty.
     EmptyInput,
-    /// Two related lists have different lengths.
+    /// An input has the wrong length.
     LengthMismatch,
     /// A Shamir node is zero.
     ZeroNode,
@@ -62,16 +64,26 @@ pub enum Error {
     NonceMismatch,
     /// A secret share differs from its public point.
     ShareMismatch,
+    /// A Taproot output key differs from the expected key.
+    OutputKeyMismatch,
+    /// A Taproot message is not a 32-byte signature hash.
+    InvalidSighash,
     /// Another session holds the device lock.
     Busy,
-    /// The session is permanently closed.
-    Tombstoned,
+    /// The leaf attempt is permanently closed.
+    AttemptClosed,
+    /// A message names another leaf attempt.
+    AttemptMismatch,
+    /// The device issued every representable leaf attempt.
+    AttemptExhausted,
     /// The call is invalid in the current stage.
     WrongStage,
     /// A same-session replay changed its input.
     ReplayMismatch,
     /// The reservation names another key epoch.
     EpochMismatch,
+    /// The reservation deadline has passed.
+    Expired,
     /// A receiver-local delivery names another receiver.
     ReceiverMismatch,
     /// A command identifier already names different bytes.
@@ -104,6 +116,7 @@ impl Error {
             Self::InvalidPoint => "invalid_point",
             Self::IdentityPoint => "identity_point",
             Self::InvalidScalar => "invalid_scalar",
+            Self::InvalidTweak => "invalid_tweak",
             Self::InvalidElementTag => "invalid_element_tag",
             Self::InvalidIdentity => "invalid_identity",
             Self::UnexpectedEnd { .. } => "unexpected_end",
@@ -123,11 +136,16 @@ impl Error {
             Self::SupportMismatch => "support_mismatch",
             Self::NonceMismatch => "nonce_mismatch",
             Self::ShareMismatch => "share_mismatch",
+            Self::OutputKeyMismatch => "output_key_mismatch",
+            Self::InvalidSighash => "invalid_sighash",
             Self::Busy => "busy",
-            Self::Tombstoned => "tombstoned",
+            Self::AttemptClosed => "attempt_closed",
+            Self::AttemptMismatch => "attempt_mismatch",
+            Self::AttemptExhausted => "attempt_exhausted",
             Self::WrongStage => "wrong_stage",
             Self::ReplayMismatch => "replay_mismatch",
             Self::EpochMismatch => "epoch_mismatch",
+            Self::Expired => "expired",
             Self::ReceiverMismatch => "receiver_mismatch",
             Self::CommandMismatch => "command_mismatch",
             Self::StalePredecessor => "stale_predecessor",
@@ -150,6 +168,7 @@ impl fmt::Display for Error {
             Self::InvalidPoint => f.write_str("invalid point"),
             Self::IdentityPoint => f.write_str("identity point"),
             Self::InvalidScalar => f.write_str("invalid scalar"),
+            Self::InvalidTweak => f.write_str("invalid Taproot tweak"),
             Self::InvalidElementTag => f.write_str("invalid group-element tag"),
             Self::InvalidIdentity => f.write_str("invalid identity encoding"),
             Self::UnexpectedEnd { offset, needed } => {
@@ -171,11 +190,16 @@ impl fmt::Display for Error {
             Self::SupportMismatch => f.write_str("support mismatch"),
             Self::NonceMismatch => f.write_str("nonce mismatch"),
             Self::ShareMismatch => f.write_str("share mismatch"),
+            Self::OutputKeyMismatch => f.write_str("Taproot output key mismatch"),
+            Self::InvalidSighash => f.write_str("invalid Taproot signature hash"),
             Self::Busy => f.write_str("device busy"),
-            Self::Tombstoned => f.write_str("session tombstoned"),
+            Self::AttemptClosed => f.write_str("leaf attempt closed"),
+            Self::AttemptMismatch => f.write_str("leaf attempt mismatch"),
+            Self::AttemptExhausted => f.write_str("leaf attempt counter exhausted"),
             Self::WrongStage => f.write_str("wrong stage"),
             Self::ReplayMismatch => f.write_str("altered replay"),
             Self::EpochMismatch => f.write_str("epoch mismatch"),
+            Self::Expired => f.write_str("reservation expired"),
             Self::ReceiverMismatch => f.write_str("receiver mismatch"),
             Self::CommandMismatch => f.write_str("command mismatch"),
             Self::StalePredecessor => f.write_str("stale predecessor"),

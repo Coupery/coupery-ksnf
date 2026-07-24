@@ -1,23 +1,26 @@
 //! Accepted signing supports.
 
-use crate::algebra::Scalar;
+use core::fmt;
+
+use crate::algebra::ScalarFor;
 use crate::keys::{MemberPoint, SharePoint};
+use crate::profile::{DefaultProfile, Profile};
 use crate::shamir::{Node, lagrange_at_zero};
 use crate::types::{DeviceId, PersonId, Slot};
 use crate::{Error, Result};
 
 /// A device in one accepted inner support.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct DeviceParticipant {
+pub struct DeviceParticipant<P: Profile = DefaultProfile> {
     device: DeviceId,
-    node: Node,
-    share: SharePoint,
+    node: Node<P>,
+    share: SharePoint<P>,
 }
 
-impl DeviceParticipant {
+impl<P: Profile> DeviceParticipant<P> {
     /// Creates a device participant.
     #[must_use]
-    pub const fn new(device: DeviceId, node: Node, share: SharePoint) -> Self {
+    pub const fn new(device: DeviceId, node: Node<P>, share: SharePoint<P>) -> Self {
         Self {
             device,
             node,
@@ -33,30 +36,30 @@ impl DeviceParticipant {
 
     /// Returns the Shamir node.
     #[must_use]
-    pub const fn node(self) -> Node {
+    pub const fn node(self) -> Node<P> {
         self.node
     }
 
     /// Returns the public share point.
     #[must_use]
-    pub const fn share(self) -> SharePoint {
+    pub const fn share(self) -> SharePoint<P> {
         self.share
     }
 }
 
 /// A person in one accepted outer support.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct PersonParticipant {
+pub struct PersonParticipant<P: Profile = DefaultProfile> {
     person: PersonId,
     slot: Slot,
-    node: Node,
-    member: MemberPoint,
+    node: Node<P>,
+    member: MemberPoint<P>,
 }
 
-impl PersonParticipant {
+impl<P: Profile> PersonParticipant<P> {
     /// Creates a person participant.
     #[must_use]
-    pub const fn new(person: PersonId, slot: Slot, node: Node, member: MemberPoint) -> Self {
+    pub const fn new(person: PersonId, slot: Slot, node: Node<P>, member: MemberPoint<P>) -> Self {
         Self {
             person,
             slot,
@@ -79,25 +82,25 @@ impl PersonParticipant {
 
     /// Returns the Shamir node.
     #[must_use]
-    pub const fn node(self) -> Node {
+    pub const fn node(self) -> Node<P> {
         self.node
     }
 
     /// Returns the vault-local member point.
     #[must_use]
-    pub const fn member(self) -> MemberPoint {
+    pub const fn member(self) -> MemberPoint<P> {
         self.member
     }
 }
 
 /// A device's inner Lagrange coefficient.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct InnerCoefficient {
+#[derive(Clone, Copy, Eq, PartialEq)]
+pub struct InnerCoefficient<P: Profile = DefaultProfile> {
     device: DeviceId,
-    scalar: Scalar,
+    scalar: ScalarFor<P>,
 }
 
-impl InnerCoefficient {
+impl<P: Profile> InnerCoefficient<P> {
     /// Returns the device identifier.
     #[must_use]
     pub const fn device(self) -> DeviceId {
@@ -106,28 +109,37 @@ impl InnerCoefficient {
 
     /// Returns the coefficient scalar.
     #[must_use]
-    pub const fn scalar(self) -> Scalar {
+    pub const fn scalar(self) -> ScalarFor<P> {
         self.scalar
     }
 }
 
+impl<P: Profile> fmt::Debug for InnerCoefficient<P> {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("InnerCoefficient")
+            .field("device", &self.device)
+            .finish_non_exhaustive()
+    }
+}
+
 /// A person's outer Lagrange coefficient.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct OuterCoefficient {
+#[derive(Clone, Copy, Eq, PartialEq)]
+pub struct OuterCoefficient<P: Profile = DefaultProfile> {
     person: PersonId,
     slot: Slot,
-    member: MemberPoint,
-    scalar: Scalar,
+    member: MemberPoint<P>,
+    scalar: ScalarFor<P>,
 }
 
 /// A source role's coefficient in one accepted support.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct SourceWeight {
+#[derive(Clone, Copy, Eq, PartialEq)]
+pub struct SourceWeight<P: Profile = DefaultProfile> {
     device: DeviceId,
-    scalar: Scalar,
+    scalar: ScalarFor<P>,
 }
 
-impl SourceWeight {
+impl<P: Profile> SourceWeight<P> {
     /// Returns the source device.
     #[must_use]
     pub const fn device(self) -> DeviceId {
@@ -136,12 +148,21 @@ impl SourceWeight {
 
     /// Returns the source coefficient.
     #[must_use]
-    pub const fn scalar(self) -> Scalar {
+    pub const fn scalar(self) -> ScalarFor<P> {
         self.scalar
     }
 }
 
-impl OuterCoefficient {
+impl<P: Profile> fmt::Debug for SourceWeight<P> {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("SourceWeight")
+            .field("device", &self.device)
+            .finish_non_exhaustive()
+    }
+}
+
+impl<P: Profile> OuterCoefficient<P> {
     /// Returns the person identifier.
     #[must_use]
     pub const fn person(self) -> PersonId {
@@ -156,32 +177,43 @@ impl OuterCoefficient {
 
     /// Returns the vault-local member point.
     #[must_use]
-    pub const fn member(self) -> MemberPoint {
+    pub const fn member(self) -> MemberPoint<P> {
         self.member
     }
 
     /// Returns the coefficient scalar.
     #[must_use]
-    pub const fn scalar(self) -> Scalar {
+    pub const fn scalar(self) -> ScalarFor<P> {
         self.scalar
     }
 }
 
-/// A canonical accepted device support.
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct InnerSupport {
-    participants: Vec<DeviceParticipant>,
-    coefficients: Vec<Scalar>,
+impl<P: Profile> fmt::Debug for OuterCoefficient<P> {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("OuterCoefficient")
+            .field("person", &self.person)
+            .field("slot", &self.slot)
+            .field("member", &self.member)
+            .finish_non_exhaustive()
+    }
 }
 
-impl InnerSupport {
+/// A canonical accepted device support.
+#[derive(Clone, Eq, PartialEq)]
+pub struct InnerSupport<P: Profile = DefaultProfile> {
+    participants: Vec<DeviceParticipant<P>>,
+    coefficients: Vec<ScalarFor<P>>,
+}
+
+impl<P: Profile> InnerSupport<P> {
     /// Creates a support sorted by device identifier.
     ///
     /// # Errors
     ///
     /// Returns an error for an empty support, duplicate device, or duplicate
     /// Shamir node.
-    pub fn new(mut participants: Vec<DeviceParticipant>) -> Result<Self> {
+    pub fn new(mut participants: Vec<DeviceParticipant<P>>) -> Result<Self> {
         if participants.is_empty() {
             return Err(Error::EmptyInput);
         }
@@ -200,7 +232,7 @@ impl InnerSupport {
 
     /// Returns the sorted participants.
     #[must_use]
-    pub fn participants(&self) -> &[DeviceParticipant] {
+    pub fn participants(&self) -> &[DeviceParticipant<P>] {
         &self.participants
     }
 
@@ -209,7 +241,7 @@ impl InnerSupport {
     /// # Errors
     ///
     /// Returns [`Error::ParticipantNotFound`] when the device is absent.
-    pub fn coefficient(&self, device: DeviceId) -> Result<InnerCoefficient> {
+    pub fn coefficient(&self, device: DeviceId) -> Result<InnerCoefficient<P>> {
         let index = self
             .participants
             .binary_search_by_key(&device, |participant| participant.device)
@@ -225,7 +257,7 @@ impl InnerSupport {
     /// # Errors
     ///
     /// Returns [`Error::ParticipantNotFound`] when the device is absent.
-    pub fn participant(&self, device: DeviceId) -> Result<DeviceParticipant> {
+    pub fn participant(&self, device: DeviceId) -> Result<DeviceParticipant<P>> {
         self.participants
             .binary_search_by_key(&device, |participant| participant.device)
             .map(|index| self.participants[index])
@@ -233,21 +265,30 @@ impl InnerSupport {
     }
 }
 
-/// A canonical accepted person support.
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct OuterSupport {
-    participants: Vec<PersonParticipant>,
-    coefficients: Vec<Scalar>,
+impl<P: Profile> fmt::Debug for InnerSupport<P> {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("InnerSupport")
+            .field("participants", &self.participants)
+            .finish_non_exhaustive()
+    }
 }
 
-impl OuterSupport {
+/// A canonical accepted person support.
+#[derive(Clone, Eq, PartialEq)]
+pub struct OuterSupport<P: Profile = DefaultProfile> {
+    participants: Vec<PersonParticipant<P>>,
+    coefficients: Vec<ScalarFor<P>>,
+}
+
+impl<P: Profile> OuterSupport<P> {
     /// Creates a support sorted by outer slot.
     ///
     /// # Errors
     ///
     /// Returns an error for an empty support or duplicate person, slot, or
     /// Shamir node.
-    pub fn new(mut participants: Vec<PersonParticipant>) -> Result<Self> {
+    pub fn new(mut participants: Vec<PersonParticipant<P>>) -> Result<Self> {
         if participants.is_empty() {
             return Err(Error::EmptyInput);
         }
@@ -266,7 +307,7 @@ impl OuterSupport {
 
     /// Returns the sorted participants.
     #[must_use]
-    pub fn participants(&self) -> &[PersonParticipant] {
+    pub fn participants(&self) -> &[PersonParticipant<P>] {
         &self.participants
     }
 
@@ -275,7 +316,7 @@ impl OuterSupport {
     /// # Errors
     ///
     /// Returns [`Error::ParticipantNotFound`] when the person is absent.
-    pub fn coefficient(&self, person: PersonId) -> Result<OuterCoefficient> {
+    pub fn coefficient(&self, person: PersonId) -> Result<OuterCoefficient<P>> {
         let index = self
             .participants
             .iter()
@@ -295,7 +336,7 @@ impl OuterSupport {
     /// # Errors
     ///
     /// Returns [`Error::ParticipantNotFound`] when the slot is absent.
-    pub fn participant(&self, slot: Slot) -> Result<PersonParticipant> {
+    pub fn participant(&self, slot: Slot) -> Result<PersonParticipant<P>> {
         self.participants
             .binary_search_by_key(&slot, |participant| participant.slot)
             .map(|index| self.participants[index])
@@ -311,9 +352,9 @@ impl OuterSupport {
     pub fn source_weight(
         &self,
         person: PersonId,
-        inner: &InnerSupport,
+        inner: &InnerSupport<P>,
         device: DeviceId,
-    ) -> Result<SourceWeight> {
+    ) -> Result<SourceWeight<P>> {
         Ok(SourceWeight {
             device,
             scalar: self.coefficient(person)?.scalar() * inner.coefficient(device)?.scalar(),
@@ -321,13 +362,22 @@ impl OuterSupport {
     }
 }
 
-impl InnerSupport {
+impl<P: Profile> fmt::Debug for OuterSupport<P> {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("OuterSupport")
+            .field("participants", &self.participants)
+            .finish_non_exhaustive()
+    }
+}
+
+impl<P: Profile> InnerSupport<P> {
     /// Derives one device's inner source coefficient.
     ///
     /// # Errors
     ///
     /// Returns [`Error::ParticipantNotFound`] when the device is absent.
-    pub fn source_weight(&self, device: DeviceId) -> Result<SourceWeight> {
+    pub fn source_weight(&self, device: DeviceId) -> Result<SourceWeight<P>> {
         Ok(SourceWeight {
             device,
             scalar: self.coefficient(device)?.scalar(),
@@ -335,7 +385,7 @@ impl InnerSupport {
     }
 }
 
-fn reject_duplicate_devices(participants: &[DeviceParticipant]) -> Result<()> {
+fn reject_duplicate_devices<P: Profile>(participants: &[DeviceParticipant<P>]) -> Result<()> {
     for (index, participant) in participants.iter().enumerate() {
         if participants[..index]
             .iter()
@@ -347,7 +397,7 @@ fn reject_duplicate_devices(participants: &[DeviceParticipant]) -> Result<()> {
     Ok(())
 }
 
-fn reject_duplicate_people(participants: &[PersonParticipant]) -> Result<()> {
+fn reject_duplicate_people<P: Profile>(participants: &[PersonParticipant<P>]) -> Result<()> {
     for (index, participant) in participants.iter().enumerate() {
         if participants[..index]
             .iter()

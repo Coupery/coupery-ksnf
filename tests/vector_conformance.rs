@@ -1,4 +1,6 @@
-#![allow(missing_docs)]
+//! Published-vector conformance tests.
+
+#![cfg(feature = "secp256k1")]
 
 mod vector_cases;
 

@@ -1,4 +1,6 @@
-#![allow(missing_docs)]
+//! Activation tests.
+
+#![cfg(feature = "secp256k1")]
 
 use rand_chacha::ChaCha20Rng;
 use rand_core::SeedableRng as _;
@@ -12,6 +14,7 @@ use coupery_ksnf::genesis::{PublicDevice, PublicPerson, PublicPolynomial, Valida
 use coupery_ksnf::keys::{AnchorId, KeyEpoch, SharePoint};
 use coupery_ksnf::leaf::{LeafRegistry, LeafStage};
 use coupery_ksnf::log_act::{MemoryLog, Terminal};
+use coupery_ksnf::profile::Secp256k1;
 use coupery_ksnf::shamir::Node;
 use coupery_ksnf::support::{DeviceParticipant, InnerSupport};
 use coupery_ksnf::transcript::{
@@ -24,7 +27,7 @@ use coupery_ksnf::types::{
 use coupery_ksnf::{Error, Result};
 
 #[test]
-#[allow(clippy::too_many_lines)]
+#[expect(clippy::too_many_lines, reason = "Keeps one protocol path together.")]
 fn bundled_inner_activation_closes_old_leaf_state() -> Result<()> {
     let vault = VaultId::new([0x11; 32]);
     let person = PersonId::new([0x21; 32]);
@@ -50,7 +53,7 @@ fn bundled_inner_activation_closes_old_leaf_state() -> Result<()> {
         )],
     )?;
     let genesis =
-        ValidatedPublicGenesis::from_parts(vault, constant_polynomial(101)?, vec![public_person])?;
+        ValidatedPublicGenesis::validate(vault, constant_polynomial(101)?, vec![public_person])?;
     let outer = genesis.outer_support(&[person])?;
     let old_inner = genesis.inner_support(person, &[device_1])?;
     let device_state = genesis.attach_share(
@@ -63,9 +66,9 @@ fn bundled_inner_activation_closes_old_leaf_state() -> Result<()> {
     let old_session = SessionId::new([0x51; 32]);
     let old_reservation =
         reservation_bytes(&genesis, &outer, old_inner.clone(), epoch, old_session, 1)?;
-    leaf.reserve(old_session, &old_reservation, &outer)?;
+    let old_attempt = leaf.reserve(old_session, 0, &old_reservation, &outer)?;
     leaf.commit(
-        old_session,
+        old_attempt,
         &old_reservation,
         &mut ChaCha20Rng::from_seed([1; 32]),
     )?;
@@ -150,7 +153,7 @@ fn bundled_inner_activation_closes_old_leaf_state() -> Result<()> {
     leaf.activate_inner(new_epoch, identity_1, member_1)?;
     assert_eq!(leaf.epoch(vault)?, new_epoch);
     assert_eq!(leaf.stage(), None);
-    assert!(leaf.is_tombstoned(old_session));
+    assert!(leaf.is_closed(old_attempt));
 
     let new_inner = InnerSupport::new(vec![
         DeviceParticipant::new(
@@ -167,21 +170,21 @@ fn bundled_inner_activation_closes_old_leaf_state() -> Result<()> {
     let new_session = SessionId::new([0x52; 32]);
     let new_reservation =
         reservation_bytes(&genesis, &outer, new_inner, new_epoch, new_session, 2)?;
-    leaf.reserve(new_session, &new_reservation, &outer)?;
+    leaf.reserve(new_session, 0, &new_reservation, &outer)?;
     assert_eq!(leaf.stage(), Some(LeafStage::Reserved));
     assert_eq!(
         leaf.commit(
-            old_session,
+            old_attempt,
             &old_reservation,
             &mut ChaCha20Rng::from_seed([3; 32]),
         ),
-        Err(Error::Tombstoned)
+        Err(Error::AttemptClosed)
     );
     Ok(())
 }
 
 #[test]
-#[allow(clippy::too_many_lines)]
+#[expect(clippy::too_many_lines, reason = "Keeps one protocol path together.")]
 fn bundle_failure_aborts_every_candidate() -> Result<()> {
     let source = DeviceId::new([0x33; 32]);
     let target = DeviceId::new([0x34; 32]);
@@ -259,12 +262,16 @@ fn bundle_failure_aborts_every_candidate() -> Result<()> {
         }
     }
     bundle.close_commitments(&mut log)?;
+    let mut released_1 = Vec::new();
     for (command, contributions) in [
         (&command_1, &contributions_1),
         (&command_2, &contributions_2),
     ] {
         for contribution in contributions {
-            bundle.open(command.id(), contribution.opening(), &mut log)?;
+            let released = bundle.open_contribution(command.id(), contribution, &mut log)?;
+            if command.id() == command_1.id() {
+                released_1.push(released);
+            }
         }
     }
     let views = bundle.close_openings(&mut log)?;
@@ -274,7 +281,7 @@ fn bundle_failure_aborts_every_candidate() -> Result<()> {
         .ok_or(Error::ParticipantNotFound)?;
     for target in command_1.shape().targets() {
         let mut accumulator = TargetAccumulator::new(view.clone(), target)?;
-        for contribution in &contributions_1 {
+        for contribution in &released_1 {
             accumulator.receive(contribution.share(&command_1, target)?)?;
         }
         let (receipt, _) = accumulator.finish()?.into_parts();
@@ -295,7 +302,7 @@ fn bundle_failure_aborts_every_candidate() -> Result<()> {
 }
 
 #[test]
-#[allow(clippy::too_many_lines)]
+#[expect(clippy::too_many_lines, reason = "Keeps one protocol path together.")]
 fn multi_vault_registry_shares_one_lock_and_inner_epoch() -> Result<()> {
     let vault_1 = VaultId::new([0x14; 32]);
     let vault_2 = VaultId::new([0x15; 32]);
@@ -382,14 +389,14 @@ fn multi_vault_registry_shares_one_lock_and_inner_epoch() -> Result<()> {
         session_2,
         2,
     )?;
-    leaf.reserve(session_1, &reservation_1, &outer_1)?;
+    let attempt_1 = leaf.reserve(session_1, 0, &reservation_1, &outer_1)?;
     assert_eq!(
-        leaf.reserve(session_2, &reservation_2, &outer_2),
+        leaf.reserve(session_2, 0, &reservation_2, &outer_2),
         Err(Error::Busy)
     );
-    leaf.close(session_1)?;
-    leaf.reserve(session_2, &reservation_2, &outer_2)?;
-    leaf.close(session_2)?;
+    leaf.close(attempt_1)?;
+    let attempt_2 = leaf.reserve(session_2, 0, &reservation_2, &outer_2)?;
+    leaf.close(attempt_2)?;
 
     let target_shape = TargetShape::Single(SingleShape::new(
         2,
@@ -491,8 +498,8 @@ fn multi_vault_registry_shares_one_lock_and_inner_epoch() -> Result<()> {
         next_session,
         3,
     )?;
-    leaf.reserve(next_session, &next_reservation, &outer_1)?;
-    leaf.close(next_session)?;
+    let next_attempt = leaf.reserve(next_session, 0, &next_reservation, &outer_1)?;
+    leaf.close(next_attempt)?;
     let next_session = SessionId::new([0x57; 32]);
     let next_reservation = reservation_bytes(
         &genesis_2,
@@ -502,7 +509,7 @@ fn multi_vault_registry_shares_one_lock_and_inner_epoch() -> Result<()> {
         next_session,
         4,
     )?;
-    leaf.reserve(next_session, &next_reservation, &outer_2)?;
+    leaf.reserve(next_session, 0, &next_reservation, &outer_2)?;
     Ok(())
 }
 
@@ -528,14 +535,17 @@ fn prepare_inner_bundle(
         }
     }
     bundle.close_commitments(log)?;
+    let mut released = Vec::with_capacity(components.len());
     for (command, contributions) in components {
+        let mut component = Vec::with_capacity(contributions.len());
         for contribution in *contributions {
-            bundle.open(command.id(), contribution.opening(), log)?;
+            component.push(bundle.open_contribution(command.id(), contribution, log)?);
         }
+        released.push(component);
     }
     let views = bundle.close_openings(log)?;
     let mut all_pending = Vec::with_capacity(components.len());
-    for (command, contributions) in components {
+    for ((command, _), released) in components.iter().zip(&released) {
         let view = views
             .iter()
             .find_map(|(id, view)| (*id == command.id()).then_some(view))
@@ -543,7 +553,7 @@ fn prepare_inner_bundle(
         let mut pending = Vec::new();
         for target in command.shape().targets() {
             let mut accumulator = TargetAccumulator::new(view.clone(), target)?;
-            for contribution in *contributions {
+            for contribution in released {
                 accumulator.receive(contribution.share(command, target)?)?;
             }
             let (receipt, share) = accumulator.finish()?.into_parts();
@@ -652,7 +662,7 @@ fn one_device_genesis(
             share_point(member)?,
         )],
     )?;
-    ValidatedPublicGenesis::from_parts(vault, constant_polynomial(member)?, vec![person])
+    ValidatedPublicGenesis::validate(vault, constant_polynomial(member)?, vec![person])
 }
 
 fn two_device_genesis(
@@ -665,10 +675,14 @@ fn two_device_genesis(
 ) -> Result<ValidatedPublicGenesis> {
     let identity = Scalar::from(identity);
     let member = Scalar::from(member);
-    let identity_polynomial =
-        PublicPolynomial::new(vec![Element::from_scalar(identity), Element::IDENTITY])?;
-    let member_polynomial =
-        PublicPolynomial::new(vec![Element::from_scalar(member), Element::IDENTITY])?;
+    let identity_polynomial = PublicPolynomial::new(vec![
+        Element::from_scalar(identity),
+        Element::<Secp256k1>::identity(),
+    ])?;
+    let member_polynomial = PublicPolynomial::new(vec![
+        Element::from_scalar(member),
+        Element::<Secp256k1>::identity(),
+    ])?;
     let person = PublicPerson::new(
         person,
         Node::from_u64(1)?,
@@ -689,7 +703,7 @@ fn two_device_genesis(
             ),
         ],
     )?;
-    ValidatedPublicGenesis::from_parts(
+    ValidatedPublicGenesis::validate(
         vault,
         PublicPolynomial::new(vec![Element::from_scalar(member)])?,
         vec![person],

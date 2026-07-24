@@ -1,4 +1,6 @@
-#![allow(missing_docs)]
+//! Redistribution tests.
+
+#![cfg(feature = "secp256k1")]
 
 use std::collections::BTreeMap;
 
@@ -13,6 +15,7 @@ use coupery_ksnf::dealing::{
 };
 use coupery_ksnf::keys::{MemberPoint, SharePoint};
 use coupery_ksnf::log_act::{LogAct, MemoryLog, Terminal};
+use coupery_ksnf::profile::Secp256k1;
 use coupery_ksnf::shamir::{Node, interpolate_constant};
 use coupery_ksnf::support::{DeviceParticipant, InnerSupport, OuterSupport, PersonParticipant};
 use coupery_ksnf::types::{ActivationHandle, CommandId, DeviceId, PersonId, ScopeId, Slot};
@@ -99,7 +102,7 @@ fn rejected_single_candidate_retries_under_the_same_key() -> Result<()> {
         .map(|share| share.expose(|value| *value))
         .collect::<Vec<_>>();
     assert_eq!(
-        interpolate_constant(&[Node::from_u64(1)?, Node::from_u64(2)?], &values)?,
+        interpolate_constant::<Secp256k1>(&[Node::from_u64(1)?, Node::from_u64(2)?], &values,)?,
         Scalar::from(35_u64)
     );
     assert!(installed.iter().all(|share| share.handle() == handle));
@@ -107,7 +110,7 @@ fn rejected_single_candidate_retries_under_the_same_key() -> Result<()> {
 }
 
 #[test]
-#[allow(clippy::too_many_lines)]
+#[expect(clippy::too_many_lines, reason = "Keeps one protocol path together.")]
 fn outer_candidate_links_each_inner_constant() -> Result<()> {
     let source = DeviceId::new([0x11; 32]);
     let source_person = PersonId::new([0x10; 32]);
@@ -185,7 +188,7 @@ fn outer_candidate_links_each_inner_constant() -> Result<()> {
         .iter()
         .map(|share| (share.target(), share.expose(|value| *value)))
         .collect::<BTreeMap<_, _>>();
-    let member_1 = interpolate_constant(
+    let member_1 = interpolate_constant::<Secp256k1>(
         &[Node::from_u64(1)?, Node::from_u64(2)?],
         &[
             values[&TargetId::Outer {
@@ -198,7 +201,7 @@ fn outer_candidate_links_each_inner_constant() -> Result<()> {
             }],
         ],
     )?;
-    let member_2 = interpolate_constant(
+    let member_2 = interpolate_constant::<Secp256k1>(
         &[Node::from_u64(1)?, Node::from_u64(2)?],
         &[
             values[&TargetId::Outer {
@@ -212,7 +215,7 @@ fn outer_candidate_links_each_inner_constant() -> Result<()> {
         ],
     )?;
     assert_eq!(
-        interpolate_constant(
+        interpolate_constant::<Secp256k1>(
             &[Node::from_u64(1)?, Node::from_u64(2)?],
             &[member_1, member_2],
         )?,
@@ -250,11 +253,23 @@ fn invalid_opening_and_private_share_never_install() -> Result<()> {
         &mut rng,
     )?;
     let refresher = Contribution::refresher(&bad_command, target, &mut rng)?;
+    let mut opening_log = MemoryLog::default();
+    opening_log.install_genesis(scope, predecessor)?;
+    let mut opening_candidate = Candidate::new(bad_command.clone(), &mut opening_log)?;
+    opening_candidate.commit(
+        contribution.role(),
+        contribution.commitment(),
+        &mut opening_log,
+    )?;
+    opening_candidate.commit(refresher.role(), refresher.commitment(), &mut opening_log)?;
+    opening_candidate.close_commitments(&mut opening_log)?;
+    let opening = opening_candidate
+        .open_contribution(&contribution, &mut opening_log)?
+        .opening();
     let mut bad = Candidate::new(bad_command.clone(), &mut log)?;
     bad.commit(contribution.role(), contribution.commitment(), &mut log)?;
     bad.commit(refresher.role(), refresher.commitment(), &mut log)?;
     bad.close_commitments(&mut log)?;
-    let opening = contribution.opening();
     assert_eq!(
         bad.open(
             Opening::new(
@@ -280,8 +295,10 @@ fn invalid_opening_and_private_share_never_install() -> Result<()> {
     candidate.commit(contribution.role(), contribution.commitment(), &mut log)?;
     candidate.commit(refresher.role(), refresher.commitment(), &mut log)?;
     candidate.close_commitments(&mut log)?;
-    candidate.open(contribution.opening(), &mut log)?;
-    candidate.open(refresher.opening(), &mut log)?;
+    let _released = [
+        candidate.open_contribution(&contribution, &mut log)?,
+        candidate.open_contribution(&refresher, &mut log)?,
+    ];
     let view = candidate.close_openings(&mut log)?;
     let mut accumulator = TargetAccumulator::new(view, TargetId::Single(target))?;
     assert_eq!(
@@ -298,6 +315,68 @@ fn invalid_opening_and_private_share_never_install() -> Result<()> {
     Ok(())
 }
 
+#[test]
+fn stale_candidate_cannot_release_an_opening() -> Result<()> {
+    let source = DeviceId::new([0x15; 32]);
+    let target = DeviceId::new([0x25; 32]);
+    let scope = ScopeId::new([0x35; 32]);
+    let predecessor = ActivationHandle::new([0x45; 32]);
+    let shape = TargetShape::Single(SingleShape::new(
+        1,
+        vec![TargetDevice::new(target, Node::from_u64(1)?)],
+    )?);
+    let support = InnerSupport::new(vec![device_participant(source, 1, 35)?])?;
+    let roles = vec![
+        RoleSpec::source(source, share_point(35)?, support.source_weight(source)?)?,
+        RoleSpec::refresher(target),
+    ];
+    let stale_command = command(scope, 6, predecessor, 35, shape.clone(), roles.clone())?;
+    let winner_command = command(scope, 7, predecessor, 35, shape, roles)?;
+    let mut rng = ChaCha20Rng::from_seed([6; 32]);
+    let stale_contributions = vec![
+        Contribution::source(
+            &stale_command,
+            source,
+            &SecretScalar::new(Scalar::from(35_u64)),
+            &mut rng,
+        )?,
+        Contribution::refresher(&stale_command, target, &mut rng)?,
+    ];
+    let winner_contributions = vec![
+        Contribution::source(
+            &winner_command,
+            source,
+            &SecretScalar::new(Scalar::from(35_u64)),
+            &mut rng,
+        )?,
+        Contribution::refresher(&winner_command, target, &mut rng)?,
+    ];
+    let mut log = MemoryLog::default();
+    log.install_genesis(scope, predecessor)?;
+    let mut stale = Candidate::new(stale_command.clone(), &mut log)?;
+    for contribution in &stale_contributions {
+        stale.commit(contribution.role(), contribution.commitment(), &mut log)?;
+    }
+    stale.close_commitments(&mut log)?;
+
+    let (Terminal::Activated(_), _, _) = execute(&winner_command, &winner_contributions, &mut log)?
+    else {
+        return Err(Error::InvalidTranscript);
+    };
+    assert_eq!(
+        stale
+            .open_contribution(&stale_contributions[0], &mut log)
+            .map(|_| ()),
+        Err(Error::StalePredecessor)
+    );
+    assert_eq!(
+        log.transcript(stale_command.id())
+            .and_then(coupery_ksnf::log_act::LogTranscript::terminal),
+        Some(Terminal::Aborted)
+    );
+    Ok(())
+}
+
 fn execute(
     command: &Command,
     contributions: &[Contribution],
@@ -309,10 +388,12 @@ fn execute(
         candidate.commit(contribution.role(), contribution.commitment(), log)?;
     }
     candidate.close_commitments(log)?;
+    let mut released = Vec::with_capacity(contributions.len());
     for contribution in contributions {
-        let opening = contribution.opening();
+        let released_contribution = candidate.open_contribution(contribution, log)?;
+        let opening = released_contribution.opening();
         assert_eq!(Opening::from_bytes(&opening.to_bytes()?)?, opening);
-        candidate.open(opening, log)?;
+        released.push(released_contribution);
     }
     let view = candidate.close_openings(log)?;
     assert_eq!(
@@ -320,12 +401,12 @@ fn execute(
         *view.aggregate()
     );
     candidate.commit(contributions[0].role(), contributions[0].commitment(), log)?;
-    candidate.open(contributions[0].opening(), log)?;
+    candidate.open(released[0].opening(), log)?;
 
     let mut pending = Vec::new();
     for target in command.shape().targets() {
         let mut accumulator = TargetAccumulator::new(view.clone(), target)?;
-        for contribution in contributions {
+        for contribution in &released {
             accumulator.receive(contribution.share(command, target)?)?;
         }
         let (receipt, share) = accumulator.finish()?.into_parts();

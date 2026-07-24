@@ -2,9 +2,9 @@ use coupery_ksnf::Result as KResult;
 use coupery_ksnf::algebra::{Element, Point, Scalar, SecretScalar};
 use coupery_ksnf::keys::{AnchorId, IdentityKey, KeyEpoch, MemberPoint, SharePoint, VaultKey};
 use coupery_ksnf::shamir::Node;
+use coupery_ksnf::signing::hazmat::respond_device;
 use coupery_ksnf::signing::{
     DeviceNonce, DeviceNonceSet, MemberResponse, Nonce, aggregate_member, aggregate_signature,
-    respond_device,
 };
 use coupery_ksnf::support::{DeviceParticipant, InnerSupport, OuterSupport, PersonParticipant};
 use coupery_ksnf::transcript::{
@@ -12,7 +12,8 @@ use coupery_ksnf::transcript::{
     SigningContext,
 };
 use coupery_ksnf::types::{
-    ActivationHandle, CommandId, DeviceId, InnerEpoch, OuterEpoch, PersonId, Slot, VaultId,
+    ActivationHandle, CommandId, DeviceId, InnerEpoch, LeafAttempt, OuterEpoch, PersonId, Slot,
+    VaultId,
 };
 use serde_json::{Value, json};
 
@@ -194,6 +195,7 @@ fn sign_person(
             &SecretScalar::new(device.share),
         )?;
         response_values.push(json!({
+            "attempt": response.attempt().sequence(),
             "bytes": hex(response.to_bytes()),
             "device": id_hex(device.device.as_bytes()),
             "inner_coefficient": scalar_hex(person.inner.coefficient(device.device)?.scalar()),
@@ -343,7 +345,9 @@ fn person_work(
         &inner,
         devices
             .iter()
-            .map(|device| DeviceNonce::new(device.device, device.pair))
+            .map(|device| {
+                DeviceNonce::new(LeafAttempt::new(device.device, device.node), device.pair)
+            })
             .collect(),
     )?;
     Ok(PersonWork {
@@ -441,7 +445,10 @@ fn one_vault(
     let record = MemberRecord::commit(&body, &salt)?;
     let nonce = Nonce::new(Scalar::from(hiding), Scalar::from(binding))?;
     let pair = nonce.commitments()?;
-    let nonces = DeviceNonceSet::new(&inner, vec![DeviceNonce::new(device, pair)])?;
+    let nonces = DeviceNonceSet::new(
+        &inner,
+        vec![DeviceNonce::new(LeafAttempt::new(device, 0), pair)],
+    )?;
     let root = RootPackage::new(
         key,
         b"vault-local request".to_vec(),

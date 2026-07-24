@@ -1,9 +1,12 @@
-//! Validation for externally provisioned shares.
+//! Import and validation for an existing sharing.
+//!
+//! This module neither runs nor proves a DKG.
 
 use core::fmt;
 
 use crate::algebra::{Element, Point, SecretScalar};
-use crate::keys::{IdentityKey, MemberPoint, SharePoint, VaultKey, anchor_share, signing_share};
+use crate::keys::{IdentityKey, MemberPoint, SharePoint, VaultKey, anchor_share};
+use crate::profile::{DefaultProfile, Profile};
 use crate::shamir::Node;
 use crate::support::{DeviceParticipant, InnerSupport, OuterSupport, PersonParticipant};
 use crate::types::{DeviceId, PersonId, Slot, VaultId};
@@ -11,18 +14,18 @@ use crate::{Error, Result};
 
 /// Public commitments to one Shamir polynomial.
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct PublicPolynomial {
-    constant: Point,
-    commitments: Vec<Element>,
+pub struct PublicPolynomial<P: Profile = DefaultProfile> {
+    constant: Point<P>,
+    commitments: Vec<Element<P>>,
 }
 
-impl PublicPolynomial {
+impl<P: Profile> PublicPolynomial<P> {
     /// Validates a nonempty coefficient-commitment vector.
     ///
     /// # Errors
     ///
     /// Returns an error when the vector is empty or its constant is identity.
-    pub fn new(commitments: Vec<Element>) -> Result<Self> {
+    pub fn new(commitments: Vec<Element<P>>) -> Result<Self> {
         let constant = commitments.first().copied().ok_or(Error::EmptyInput)?;
         Ok(Self {
             constant: Point::try_from(constant)?,
@@ -36,53 +39,32 @@ impl PublicPolynomial {
         self.commitments.len()
     }
 
-    /// Returns the coefficient commitments in constant-first order.
-    #[must_use]
-    pub fn commitments(&self) -> &[Element] {
-        &self.commitments
+    fn evaluate(&self, node: Node<P>) -> Element<P> {
+        evaluate_commitments(&self.commitments, node)
     }
 
-    /// Returns the nonidentity constant point.
-    #[must_use]
-    pub const fn constant(&self) -> Point {
-        self.constant
-    }
-
-    /// Evaluates the commitment polynomial at `node`.
-    #[must_use]
-    pub fn evaluate(&self, node: Node) -> Element {
-        self.commitments
-            .iter()
-            .rev()
-            .fold(Element::IDENTITY, |value, coefficient| {
-                value * node.scalar() + *coefficient
-            })
-    }
-
-    /// Checks one public share.
-    #[must_use]
-    pub fn verifies(&self, node: Node, share: SharePoint) -> bool {
+    fn verifies(&self, node: Node<P>, share: SharePoint<P>) -> bool {
         self.evaluate(node) == share.element()
     }
 }
 
 /// One device's public genesis data.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct PublicDevice {
+pub struct PublicDevice<P: Profile = DefaultProfile> {
     device: DeviceId,
-    node: Node,
-    identity_share: SharePoint,
-    member_share: SharePoint,
+    node: Node<P>,
+    identity_share: SharePoint<P>,
+    member_share: SharePoint<P>,
 }
 
-impl PublicDevice {
+impl<P: Profile> PublicDevice<P> {
     /// Creates a public device entry.
     #[must_use]
     pub const fn new(
         device: DeviceId,
-        node: Node,
-        identity_share: SharePoint,
-        member_share: SharePoint,
+        node: Node<P>,
+        identity_share: SharePoint<P>,
+        member_share: SharePoint<P>,
     ) -> Self {
         Self {
             device,
@@ -91,43 +73,19 @@ impl PublicDevice {
             member_share,
         }
     }
-
-    /// Returns the device identifier.
-    #[must_use]
-    pub const fn device(self) -> DeviceId {
-        self.device
-    }
-
-    /// Returns the Shamir node.
-    #[must_use]
-    pub const fn node(self) -> Node {
-        self.node
-    }
-
-    /// Returns the identity-share point.
-    #[must_use]
-    pub const fn identity_share(self) -> SharePoint {
-        self.identity_share
-    }
-
-    /// Returns the member-share point.
-    #[must_use]
-    pub const fn member_share(self) -> SharePoint {
-        self.member_share
-    }
 }
 
 /// One person's validated public genesis data.
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct PublicPerson {
+pub struct PublicPerson<P: Profile = DefaultProfile> {
     person: PersonId,
-    outer_node: Node,
-    identity: PublicPolynomial,
-    member: PublicPolynomial,
-    devices: Vec<PublicDevice>,
+    outer_node: Node<P>,
+    identity: PublicPolynomial<P>,
+    member: PublicPolynomial<P>,
+    devices: Vec<PublicDevice<P>>,
 }
 
-impl PublicPerson {
+impl<P: Profile> PublicPerson<P> {
     /// Validates one person's identity and member sharings.
     ///
     /// # Errors
@@ -136,10 +94,10 @@ impl PublicPerson {
     /// devices, or an invalid public share.
     pub fn new(
         person: PersonId,
-        outer_node: Node,
-        identity: PublicPolynomial,
-        member: PublicPolynomial,
-        mut devices: Vec<PublicDevice>,
+        outer_node: Node<P>,
+        identity: PublicPolynomial<P>,
+        member: PublicPolynomial<P>,
+        mut devices: Vec<PublicDevice<P>>,
     ) -> Result<Self> {
         if identity.threshold() != member.threshold() {
             return Err(Error::LengthMismatch);
@@ -175,43 +133,23 @@ impl PublicPerson {
         })
     }
 
-    /// Returns the person identifier.
-    #[must_use]
-    pub const fn person(&self) -> PersonId {
-        self.person
-    }
-
-    /// Returns the outer Shamir node.
-    #[must_use]
-    pub const fn outer_node(&self) -> Node {
-        self.outer_node
-    }
-
     /// Returns the stable identity key.
     #[must_use]
-    pub const fn identity_key(&self) -> IdentityKey {
-        IdentityKey::new(self.identity.constant())
+    pub const fn identity_key(&self) -> IdentityKey<P> {
+        IdentityKey::new(self.identity.constant)
     }
 
     /// Returns the vault-local member point.
     #[must_use]
-    pub const fn member_point(&self) -> MemberPoint {
-        MemberPoint::new(self.member.constant())
+    pub const fn member_point(&self) -> MemberPoint<P> {
+        MemberPoint::new(self.member.constant)
     }
 
-    /// Returns the inner threshold.
-    #[must_use]
-    pub fn threshold(&self) -> usize {
+    fn threshold(&self) -> usize {
         self.member.threshold()
     }
 
-    /// Returns the sorted public device entries.
-    #[must_use]
-    pub fn devices(&self) -> &[PublicDevice] {
-        &self.devices
-    }
-
-    fn device(&self, device: DeviceId) -> Result<PublicDevice> {
+    fn device(&self, device: DeviceId) -> Result<PublicDevice<P>> {
         self.devices
             .binary_search_by_key(&device, |entry| entry.device)
             .map(|index| self.devices[index])
@@ -221,23 +159,23 @@ impl PublicPerson {
 
 /// Validated public genesis data for one vault.
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct ValidatedPublicGenesis {
+pub struct ValidatedPublicGenesis<P: Profile = DefaultProfile> {
     vault: VaultId,
-    outer: PublicPolynomial,
-    people: Vec<PublicPerson>,
+    outer: PublicPolynomial<P>,
+    people: Vec<PublicPerson<P>>,
 }
 
-impl ValidatedPublicGenesis {
+impl<P: Profile> ValidatedPublicGenesis<P> {
     /// Validates outer and inner public genesis data.
     ///
     /// # Errors
     ///
     /// Returns an error for duplicate people or nodes, too few people, or an
     /// outer share that differs from its member point.
-    pub fn from_parts(
+    pub fn validate(
         vault: VaultId,
-        outer: PublicPolynomial,
-        mut people: Vec<PublicPerson>,
+        outer: PublicPolynomial<P>,
+        mut people: Vec<PublicPerson<P>>,
     ) -> Result<Self> {
         if people.len() < outer.threshold() {
             return Err(Error::SupportMismatch);
@@ -274,8 +212,8 @@ impl ValidatedPublicGenesis {
 
     /// Returns the stable vault key.
     #[must_use]
-    pub const fn vault_key(&self) -> VaultKey {
-        VaultKey::new(self.outer.constant())
+    pub const fn vault_key(&self) -> VaultKey<P> {
+        VaultKey::new(self.outer.constant)
     }
 
     /// Returns the outer threshold.
@@ -289,7 +227,7 @@ impl ValidatedPublicGenesis {
     /// # Errors
     ///
     /// Returns [`Error::ParticipantNotFound`] when the person is absent.
-    pub fn person(&self, person: PersonId) -> Result<&PublicPerson> {
+    pub fn person(&self, person: PersonId) -> Result<&PublicPerson<P>> {
         self.people
             .binary_search_by_key(&person, |entry| entry.person)
             .map(|index| &self.people[index])
@@ -303,7 +241,7 @@ impl ValidatedPublicGenesis {
     /// # Errors
     ///
     /// Returns an error unless `people` names one exact threshold support.
-    pub fn outer_support(&self, people: &[PersonId]) -> Result<OuterSupport> {
+    pub fn outer_support(&self, people: &[PersonId]) -> Result<OuterSupport<P>> {
         if people.len() != self.threshold() {
             return Err(Error::SupportMismatch);
         }
@@ -331,7 +269,7 @@ impl ValidatedPublicGenesis {
     /// # Errors
     ///
     /// Returns an error unless `devices` names one exact threshold support.
-    pub fn inner_support(&self, person: PersonId, devices: &[DeviceId]) -> Result<InnerSupport> {
+    pub fn inner_support(&self, person: PersonId, devices: &[DeviceId]) -> Result<InnerSupport<P>> {
         let person = self.person(person)?;
         if devices.len() != person.threshold() {
             return Err(Error::SupportMismatch);
@@ -359,9 +297,9 @@ impl ValidatedPublicGenesis {
         &self,
         person: PersonId,
         device: DeviceId,
-        identity: SecretScalar,
-        member: SecretScalar,
-    ) -> Result<DeviceGenesis> {
+        identity: SecretScalar<P>,
+        member: SecretScalar<P>,
+    ) -> Result<DeviceGenesis<P>> {
         let public = self.person(person)?.device(device)?;
         if secret_element(&identity) != public.identity_share.element()
             || secret_element(&member) != public.member_share.element()
@@ -385,6 +323,17 @@ impl ValidatedPublicGenesis {
                     .map(|device| (device.device, device.node, device.identity_share))
                     .collect(),
             },
+            member_map: MemberMap {
+                commitments: public_person.member.commitments.clone(),
+            },
+            outer_map: OuterMap {
+                commitments: self.outer.commitments.clone(),
+                people: self
+                    .people
+                    .iter()
+                    .map(|person| (person.person, person.outer_node, person.member_point()))
+                    .collect(),
+            },
             identity_key: public_person.identity_key(),
             member_point: public_person.member_point(),
             vault_key: self.vault_key(),
@@ -395,21 +344,23 @@ impl ValidatedPublicGenesis {
 }
 
 /// One device's validated secret genesis state.
-pub struct DeviceGenesis {
+pub struct DeviceGenesis<P: Profile = DefaultProfile> {
     vault: VaultId,
     person: PersonId,
     device: DeviceId,
-    outer_node: Node,
-    node: Node,
-    identity_map: IdentityMap,
-    identity_key: IdentityKey,
-    member_point: MemberPoint,
-    vault_key: VaultKey,
-    identity: SecretScalar,
-    anchor: SecretScalar,
+    outer_node: Node<P>,
+    node: Node<P>,
+    identity_map: IdentityMap<P>,
+    member_map: MemberMap<P>,
+    outer_map: OuterMap<P>,
+    identity_key: IdentityKey<P>,
+    member_point: MemberPoint<P>,
+    vault_key: VaultKey<P>,
+    identity: SecretScalar<P>,
+    anchor: SecretScalar<P>,
 }
 
-impl DeviceGenesis {
+impl<P: Profile> DeviceGenesis<P> {
     /// Returns the vault identifier.
     #[must_use]
     pub const fn vault(&self) -> VaultId {
@@ -428,53 +379,25 @@ impl DeviceGenesis {
         self.device
     }
 
-    /// Returns the person's outer Shamir node.
-    #[must_use]
-    pub const fn outer_node(&self) -> Node {
-        self.outer_node
-    }
-
-    /// Returns the Shamir node.
-    #[must_use]
-    pub const fn node(&self) -> Node {
-        self.node
-    }
-
     /// Returns the stable identity key.
     #[must_use]
-    pub const fn identity_key(&self) -> IdentityKey {
+    pub const fn identity_key(&self) -> IdentityKey<P> {
         self.identity_key
     }
 
     /// Returns the vault-local member point.
     #[must_use]
-    pub const fn member_point(&self) -> MemberPoint {
+    pub const fn member_point(&self) -> MemberPoint<P> {
         self.member_point
     }
 
     /// Returns the stable vault key.
     #[must_use]
-    pub const fn vault_key(&self) -> VaultKey {
+    pub const fn vault_key(&self) -> VaultKey<P> {
         self.vault_key
     }
 
-    /// Borrows the identity share for one operation.
-    pub fn with_identity<T>(&self, use_share: impl FnOnce(&crate::algebra::Scalar) -> T) -> T {
-        self.identity.expose(use_share)
-    }
-
-    /// Borrows the affine anchor share for one operation.
-    pub fn with_anchor<T>(&self, use_share: impl FnOnce(&crate::algebra::Scalar) -> T) -> T {
-        self.anchor.expose(use_share)
-    }
-
-    /// Recomputes the current member signing share.
-    #[must_use]
-    pub fn signing_share(&self) -> SecretScalar {
-        signing_share(&self.identity, &self.anchor)
-    }
-
-    pub(crate) fn into_parts(self) -> DeviceGenesisParts {
+    pub(crate) fn into_parts(self) -> DeviceGenesisParts<P> {
         DeviceGenesisParts {
             vault: self.vault,
             person: self.person,
@@ -482,6 +405,8 @@ impl DeviceGenesis {
             outer_node: self.outer_node,
             node: self.node,
             identity_map: self.identity_map,
+            member_map: self.member_map,
+            outer_map: self.outer_map,
             identity_key: self.identity_key,
             member_point: self.member_point,
             vault_key: self.vault_key,
@@ -491,27 +416,40 @@ impl DeviceGenesis {
     }
 }
 
-pub(crate) struct DeviceGenesisParts {
+pub(crate) struct DeviceGenesisParts<P: Profile = DefaultProfile> {
     pub(crate) vault: VaultId,
     pub(crate) person: PersonId,
     pub(crate) device: DeviceId,
-    pub(crate) outer_node: Node,
-    pub(crate) node: Node,
-    pub(crate) identity_map: IdentityMap,
-    pub(crate) identity_key: IdentityKey,
-    pub(crate) member_point: MemberPoint,
-    pub(crate) vault_key: VaultKey,
-    pub(crate) identity: SecretScalar,
-    pub(crate) anchor: SecretScalar,
+    pub(crate) outer_node: Node<P>,
+    pub(crate) node: Node<P>,
+    pub(crate) identity_map: IdentityMap<P>,
+    pub(crate) member_map: MemberMap<P>,
+    pub(crate) outer_map: OuterMap<P>,
+    pub(crate) identity_key: IdentityKey<P>,
+    pub(crate) member_point: MemberPoint<P>,
+    pub(crate) vault_key: VaultKey<P>,
+    pub(crate) identity: SecretScalar<P>,
+    pub(crate) anchor: SecretScalar<P>,
 }
 
 #[derive(Eq, PartialEq)]
-pub(crate) struct IdentityMap {
-    pub(crate) commitments: Vec<Element>,
-    pub(crate) devices: Vec<(DeviceId, Node, SharePoint)>,
+pub(crate) struct IdentityMap<P: Profile = DefaultProfile> {
+    pub(crate) commitments: Vec<Element<P>>,
+    pub(crate) devices: Vec<(DeviceId, Node<P>, SharePoint<P>)>,
 }
 
-impl fmt::Debug for DeviceGenesis {
+#[derive(Eq, PartialEq)]
+pub(crate) struct MemberMap<P: Profile = DefaultProfile> {
+    pub(crate) commitments: Vec<Element<P>>,
+}
+
+#[derive(Eq, PartialEq)]
+pub(crate) struct OuterMap<P: Profile = DefaultProfile> {
+    pub(crate) commitments: Vec<Element<P>>,
+    pub(crate) people: Vec<(PersonId, Node<P>, MemberPoint<P>)>,
+}
+
+impl<P: Profile> fmt::Debug for DeviceGenesis<P> {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter
             .debug_struct("DeviceGenesis")
@@ -521,6 +459,8 @@ impl fmt::Debug for DeviceGenesis {
             .field("outer_node", &self.outer_node)
             .field("node", &self.node)
             .field("identity_map", &"[REDACTED]")
+            .field("member_map", &"[REDACTED]")
+            .field("outer_map", &"[REDACTED]")
             .field("identity_key", &self.identity_key)
             .field("member_point", &self.member_point)
             .field("vault_key", &self.vault_key)
@@ -530,6 +470,18 @@ impl fmt::Debug for DeviceGenesis {
     }
 }
 
-fn secret_element(secret: &SecretScalar) -> Element {
+fn secret_element<P: Profile>(secret: &SecretScalar<P>) -> Element<P> {
     secret.expose(|scalar| Element::from_scalar(*scalar))
+}
+
+pub(crate) fn evaluate_commitments<P: Profile>(
+    commitments: &[Element<P>],
+    node: Node<P>,
+) -> Element<P> {
+    commitments
+        .iter()
+        .rev()
+        .fold(Element::identity(), |value, coefficient| {
+            value * node.scalar() + *coefficient
+        })
 }

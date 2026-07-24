@@ -1,8 +1,11 @@
-#![allow(missing_docs)]
+//! Accepted-support tests.
+
+#![cfg(feature = "secp256k1")]
 
 use coupery_ksnf::Error;
 use coupery_ksnf::algebra::{Point, Scalar};
 use coupery_ksnf::keys::{MemberPoint, SharePoint};
+use coupery_ksnf::profile::Secp256k1;
 use coupery_ksnf::shamir::Node;
 use coupery_ksnf::support::{DeviceParticipant, InnerSupport, OuterSupport, PersonParticipant};
 use coupery_ksnf::types::{DeviceId, PersonId, Slot};
@@ -11,8 +14,8 @@ use coupery_ksnf::types::{DeviceId, PersonId, Slot};
 fn supports_sort_and_derive_coefficients() -> Result<(), Error> {
     let device_a = DeviceId::new([1; 32]);
     let device_b = DeviceId::new([2; 32]);
-    let share_a = SharePoint::new(Point::from_scalar(Scalar::from(13_u64))?);
-    let share_b = SharePoint::new(Point::from_scalar(Scalar::from(17_u64))?);
+    let share_a = SharePoint::<Secp256k1>::new(Point::from_scalar(Scalar::from(13_u64))?);
+    let share_b = SharePoint::<Secp256k1>::new(Point::from_scalar(Scalar::from(17_u64))?);
     let inner = InnerSupport::new(vec![
         DeviceParticipant::new(device_b, Node::from_u64(2)?, share_b),
         DeviceParticipant::new(device_a, Node::from_u64(1)?, share_a),
@@ -46,7 +49,7 @@ fn supports_sort_and_derive_coefficients() -> Result<(), Error> {
 #[test]
 fn supports_reject_duplicate_ids_slots_and_nodes() -> Result<(), Error> {
     let device = DeviceId::new([1; 32]);
-    let share = SharePoint::new(Point::from_scalar(Scalar::ONE)?);
+    let share = SharePoint::<Secp256k1>::new(Point::from_scalar(Scalar::ONE)?);
     let node = Node::from_u64(1)?;
     assert_eq!(
         InnerSupport::new(vec![

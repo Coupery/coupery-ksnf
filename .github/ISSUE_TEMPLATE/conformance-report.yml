@@ -1,0 +1,48 @@
+name: Conformance report
+description: Report results from another KSNF implementation.
+title: "conformance: "
+labels:
+  - conformance
+body:
+  - type: input
+    id: implementation
+    attributes:
+      label: Implementation and revision
+      description: Link to source and pin the tested commit.
+    validations:
+      required: true
+  - type: checkboxes
+    id: profiles
+    attributes:
+      label: Profiles tested
+      options:
+        - label: Plain v1
+        - label: Taproot v1
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Language, compiler, platform, and dependency versions.
+    validations:
+      required: true
+  - type: textarea
+    id: results
+    attributes:
+      label: Results
+      description: List passed cases and the first mismatch, if any.
+    validations:
+      required: true
+  - type: textarea
+    id: mismatch
+    attributes:
+      label: Mismatch detail
+      description: Include the case, field path, expected bytes, and actual bytes.
+  - type: checkboxes
+    id: attestation
+    attributes:
+      label: Vector integrity
+      options:
+        - label: The released vector files were used without modification.
+          required: true

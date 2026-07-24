@@ -1,4 +1,4 @@
-#![allow(missing_docs)]
+//! Exposure-ledger tests.
 
 use coupery_ksnf::exposure::{ExposureLedger, ExposureViolation, MemberBlockSpec, TargetGroup};
 use coupery_ksnf::types::{BlockId, CommandId, DeviceId, OuterEpoch, PersonId, VaultId};

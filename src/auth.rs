@@ -4,35 +4,34 @@ use core::fmt;
 
 use zeroize::Zeroizing;
 
-use crate::algebra::Scalar;
+use crate::algebra::ScalarFor;
 use crate::encoding::Encoder;
 use crate::hash::{self, Domain};
+use crate::profile::{DefaultProfile, Profile};
 use crate::signing::{DeviceNonce, DeviceNonceSet, NoncePair};
 use crate::support::InnerSupport;
-use crate::types::{DeviceId, SessionId};
+use crate::types::{LeafAttempt, SessionId};
 use crate::{Error, Result};
-
-const VERSION: u8 = 1;
 
 /// One authenticated receiver-specific commitment delivery.
 #[derive(Clone, Eq, PartialEq)]
-pub struct AuthenticatedCommitment {
-    sender: DeviceId,
-    receiver: DeviceId,
+pub struct AuthenticatedCommitment<P: Profile = DefaultProfile> {
+    sender: LeafAttempt,
+    receiver: LeafAttempt,
     session: SessionId,
     reservation: Zeroizing<Vec<u8>>,
-    commitment: Scalar,
+    commitment: ScalarFor<P>,
 }
 
-impl AuthenticatedCommitment {
+impl<P: Profile> AuthenticatedCommitment<P> {
     /// Creates a delivery after channel authentication.
     #[must_use]
     pub fn new(
-        sender: DeviceId,
-        receiver: DeviceId,
+        sender: LeafAttempt,
+        receiver: LeafAttempt,
         session: SessionId,
         reservation: &[u8],
-        commitment: Scalar,
+        commitment: ScalarFor<P>,
     ) -> Self {
         Self {
             sender,
@@ -45,13 +44,13 @@ impl AuthenticatedCommitment {
 
     /// Returns the sender.
     #[must_use]
-    pub const fn sender(&self) -> DeviceId {
+    pub const fn sender(&self) -> LeafAttempt {
         self.sender
     }
 
     /// Returns the receiver.
     #[must_use]
-    pub const fn receiver(&self) -> DeviceId {
+    pub const fn receiver(&self) -> LeafAttempt {
         self.receiver
     }
 
@@ -69,12 +68,12 @@ impl AuthenticatedCommitment {
 
     /// Returns the commitment scalar.
     #[must_use]
-    pub const fn commitment(&self) -> Scalar {
+    pub const fn commitment(&self) -> ScalarFor<P> {
         self.commitment
     }
 }
 
-impl fmt::Debug for AuthenticatedCommitment {
+impl<P: Profile> fmt::Debug for AuthenticatedCommitment<P> {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter
             .debug_struct("AuthenticatedCommitment")
@@ -82,26 +81,25 @@ impl fmt::Debug for AuthenticatedCommitment {
             .field("receiver", &self.receiver)
             .field("session", &self.session)
             .field("reservation", &"[REDACTED]")
-            .field("commitment", &self.commitment)
-            .finish()
+            .finish_non_exhaustive()
     }
 }
 
 /// One authenticated receiver-specific nonce opening.
 #[derive(Clone, Eq, PartialEq)]
-pub struct AuthenticatedOpening {
-    sender: DeviceId,
-    receiver: DeviceId,
+pub struct AuthenticatedOpening<P: Profile = DefaultProfile> {
+    sender: LeafAttempt,
+    receiver: LeafAttempt,
     session: SessionId,
     reservation: Zeroizing<Vec<u8>>,
-    nonce: NoncePair,
+    nonce: NoncePair<P>,
 }
 
 /// One authenticated sibling abort.
 #[derive(Clone, Eq, PartialEq)]
 pub struct AuthenticatedAbort {
-    sender: DeviceId,
-    receiver: DeviceId,
+    sender: LeafAttempt,
+    receiver: LeafAttempt,
     session: SessionId,
     reservation: Zeroizing<Vec<u8>>,
 }
@@ -110,8 +108,8 @@ impl AuthenticatedAbort {
     /// Creates an abort after channel authentication.
     #[must_use]
     pub fn new(
-        sender: DeviceId,
-        receiver: DeviceId,
+        sender: LeafAttempt,
+        receiver: LeafAttempt,
         session: SessionId,
         reservation: &[u8],
     ) -> Self {
@@ -125,13 +123,13 @@ impl AuthenticatedAbort {
 
     /// Returns the sender.
     #[must_use]
-    pub const fn sender(&self) -> DeviceId {
+    pub const fn sender(&self) -> LeafAttempt {
         self.sender
     }
 
     /// Returns the receiver.
     #[must_use]
-    pub const fn receiver(&self) -> DeviceId {
+    pub const fn receiver(&self) -> LeafAttempt {
         self.receiver
     }
 
@@ -160,15 +158,15 @@ impl fmt::Debug for AuthenticatedAbort {
     }
 }
 
-impl AuthenticatedOpening {
+impl<P: Profile> AuthenticatedOpening<P> {
     /// Creates a delivery after channel authentication.
     #[must_use]
     pub fn new(
-        sender: DeviceId,
-        receiver: DeviceId,
+        sender: LeafAttempt,
+        receiver: LeafAttempt,
         session: SessionId,
         reservation: &[u8],
-        nonce: NoncePair,
+        nonce: NoncePair<P>,
     ) -> Self {
         Self {
             sender,
@@ -181,13 +179,13 @@ impl AuthenticatedOpening {
 
     /// Returns the sender.
     #[must_use]
-    pub const fn sender(&self) -> DeviceId {
+    pub const fn sender(&self) -> LeafAttempt {
         self.sender
     }
 
     /// Returns the receiver.
     #[must_use]
-    pub const fn receiver(&self) -> DeviceId {
+    pub const fn receiver(&self) -> LeafAttempt {
         self.receiver
     }
 
@@ -205,12 +203,12 @@ impl AuthenticatedOpening {
 
     /// Returns the public nonce pair.
     #[must_use]
-    pub const fn nonce(&self) -> NoncePair {
+    pub const fn nonce(&self) -> NoncePair<P> {
         self.nonce
     }
 }
 
-impl fmt::Debug for AuthenticatedOpening {
+impl<P: Profile> fmt::Debug for AuthenticatedOpening<P> {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter
             .debug_struct("AuthenticatedOpening")
@@ -225,41 +223,41 @@ impl fmt::Debug for AuthenticatedOpening {
 
 /// One fixed commitment view for a receiver.
 #[derive(Clone, Eq, PartialEq)]
-pub struct CommitmentView {
-    receiver: DeviceId,
+pub struct CommitmentView<P: Profile = DefaultProfile> {
+    receiver: LeafAttempt,
     session: SessionId,
     reservation: Zeroizing<Vec<u8>>,
-    entries: Vec<(DeviceId, Scalar)>,
+    entries: Vec<(LeafAttempt, ScalarFor<P>)>,
 }
 
-impl CommitmentView {
+impl<P: Profile> CommitmentView<P> {
     /// Validates and sorts a complete receiver-local commitment view.
     ///
     /// # Errors
     ///
     /// Returns an error for a missing, duplicate, or mismatched delivery.
     pub fn new(
-        support: &InnerSupport,
-        mut deliveries: Vec<AuthenticatedCommitment>,
+        support: &InnerSupport<P>,
+        mut deliveries: Vec<AuthenticatedCommitment<P>>,
     ) -> Result<Self> {
-        deliveries.sort_unstable_by_key(|delivery| delivery.sender);
+        deliveries.sort_unstable_by_key(|delivery| delivery.sender.device());
         let first = deliveries.first().ok_or(Error::EmptyInput)?;
         let receiver = first.receiver;
         let session = first.session;
         let reservation = first.reservation.clone();
-        support.participant(receiver)?;
+        support.participant(receiver.device())?;
         if deliveries.len() != support.participants().len() {
             return Err(Error::SupportMismatch);
         }
         if deliveries
             .windows(2)
-            .any(|pair| pair[0].sender == pair[1].sender)
+            .any(|pair| pair[0].sender.device() == pair[1].sender.device())
         {
             return Err(Error::DuplicateParticipant);
         }
         let mut entries = Vec::with_capacity(deliveries.len());
         for (delivery, participant) in deliveries.iter().zip(support.participants()) {
-            if delivery.sender != participant.device() {
+            if delivery.sender.device() != participant.device() {
                 return Err(Error::SupportMismatch);
             }
             if delivery.receiver != receiver {
@@ -283,16 +281,22 @@ impl CommitmentView {
     /// # Errors
     ///
     /// Returns [`Error::ParticipantNotFound`] when the sender is absent.
-    pub fn commitment(&self, sender: DeviceId) -> Result<Scalar> {
-        self.entries
-            .binary_search_by_key(&sender, |(device, _)| *device)
-            .map(|index| self.entries[index].1)
-            .map_err(|_| Error::ParticipantNotFound)
+    pub fn commitment(&self, sender: LeafAttempt) -> Result<ScalarFor<P>> {
+        let index = self
+            .entries
+            .binary_search_by_key(&sender.device(), |(attempt, _)| attempt.device())
+            .map_err(|_| Error::ParticipantNotFound)?;
+        let (attempt, commitment) = self.entries[index];
+        if attempt == sender {
+            Ok(commitment)
+        } else {
+            Err(Error::AttemptMismatch)
+        }
     }
 
     /// Returns the receiver.
     #[must_use]
-    pub const fn receiver(&self) -> DeviceId {
+    pub const fn receiver(&self) -> LeafAttempt {
         self.receiver
     }
 
@@ -314,7 +318,7 @@ impl CommitmentView {
     ///
     /// Returns [`Error::LengthOverflow`] for an oversized field.
     pub fn to_bytes(&self) -> Result<Zeroizing<Vec<u8>>> {
-        let mut encoder = Encoder::new();
+        let mut encoder = Encoder::<P>::for_profile();
         encode_view_prefix(
             &mut encoder,
             self.receiver,
@@ -323,59 +327,62 @@ impl CommitmentView {
             self.entries.len(),
         )?;
         for (sender, commitment) in &self.entries {
-            encoder.put_fixed(sender.as_bytes());
+            encode_attempt(&mut encoder, *sender);
             encoder.put_scalar(commitment);
         }
         Ok(Zeroizing::new(encoder.finish()))
     }
 }
 
-impl fmt::Debug for CommitmentView {
+impl<P: Profile> fmt::Debug for CommitmentView<P> {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter
             .debug_struct("CommitmentView")
             .field("receiver", &self.receiver)
             .field("session", &self.session)
             .field("reservation", &"[REDACTED]")
-            .field("entries", &self.entries)
-            .finish()
+            .field("entry_count", &self.entries.len())
+            .finish_non_exhaustive()
     }
 }
 
 /// One fixed opening view for a receiver.
 #[derive(Clone, Eq, PartialEq)]
-pub struct OpeningView {
-    receiver: DeviceId,
+pub struct OpeningView<P: Profile = DefaultProfile> {
+    receiver: LeafAttempt,
     session: SessionId,
     reservation: Zeroizing<Vec<u8>>,
-    entries: Vec<DeviceNonce>,
+    entries: Vec<DeviceNonce<P>>,
 }
 
-impl OpeningView {
+impl<P: Profile> OpeningView<P> {
     /// Validates and sorts a complete receiver-local opening view.
     ///
     /// # Errors
     ///
     /// Returns an error for a missing, duplicate, or mismatched delivery.
-    pub fn new(support: &InnerSupport, mut deliveries: Vec<AuthenticatedOpening>) -> Result<Self> {
-        deliveries.sort_unstable_by_key(|delivery| delivery.sender);
+    pub fn new(
+        support: &InnerSupport<P>,
+        mut deliveries: Vec<AuthenticatedOpening<P>>,
+    ) -> Result<Self> {
+        deliveries.sort_unstable_by_key(|delivery| delivery.sender.device());
         let first = deliveries.first().ok_or(Error::EmptyInput)?;
         let receiver = first.receiver;
         let session = first.session;
         let reservation = first.reservation.clone();
-        support.participant(receiver)?;
+        support.participant(receiver.device())?;
         if deliveries.len() != support.participants().len() {
             return Err(Error::SupportMismatch);
         }
         if deliveries
             .windows(2)
-            .any(|pair| pair[0].sender == pair[1].sender)
+            .any(|pair| pair[0].sender.device() == pair[1].sender.device())
         {
             return Err(Error::DuplicateParticipant);
         }
         let mut entries = Vec::with_capacity(deliveries.len());
         for (delivery, participant) in deliveries.iter().zip(support.participants()) {
-            if delivery.sender != participant.device() {
+            if delivery.sender.device() != participant.device() {
                 return Err(Error::SupportMismatch);
             }
             if delivery.receiver != receiver {
@@ -401,9 +408,9 @@ impl OpeningView {
     /// Returns an error when the views differ or a commitment fails.
     pub fn verify(
         &self,
-        commitments: &CommitmentView,
-        support: &InnerSupport,
-    ) -> Result<DeviceNonceSet> {
+        commitments: &CommitmentView<P>,
+        support: &InnerSupport<P>,
+    ) -> Result<DeviceNonceSet<P>> {
         if self.receiver != commitments.receiver
             || self.session != commitments.session
             || self.reservation != commitments.reservation
@@ -411,8 +418,8 @@ impl OpeningView {
             return Err(Error::InvalidTranscript);
         }
         for entry in &self.entries {
-            if nonce_commitment(entry.device(), &self.reservation, entry.nonce())?
-                != commitments.commitment(entry.device())?
+            if nonce_commitment(entry.attempt(), &self.reservation, entry.nonce())?
+                != commitments.commitment(entry.attempt())?
             {
                 return Err(Error::CommitmentMismatch);
             }
@@ -422,7 +429,7 @@ impl OpeningView {
 
     /// Returns the receiver.
     #[must_use]
-    pub const fn receiver(&self) -> DeviceId {
+    pub const fn receiver(&self) -> LeafAttempt {
         self.receiver
     }
 
@@ -444,7 +451,7 @@ impl OpeningView {
     ///
     /// Returns [`Error::LengthOverflow`] for an oversized field.
     pub fn to_bytes(&self) -> Result<Zeroizing<Vec<u8>>> {
-        let mut encoder = Encoder::new();
+        let mut encoder = Encoder::<P>::for_profile();
         encode_view_prefix(
             &mut encoder,
             self.receiver,
@@ -453,7 +460,7 @@ impl OpeningView {
             self.entries.len(),
         )?;
         for entry in &self.entries {
-            encoder.put_fixed(entry.device().as_bytes());
+            encode_attempt(&mut encoder, entry.attempt());
             encoder.put_point(entry.nonce().hiding());
             encoder.put_point(entry.nonce().binding());
         }
@@ -461,7 +468,7 @@ impl OpeningView {
     }
 }
 
-impl fmt::Debug for OpeningView {
+impl<P: Profile> fmt::Debug for OpeningView<P> {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter
             .debug_struct("OpeningView")
@@ -478,28 +485,37 @@ impl fmt::Debug for OpeningView {
 /// # Errors
 ///
 /// Returns an error for oversized reservation bytes or hash-to-field failure.
-pub fn nonce_commitment(device: DeviceId, reservation: &[u8], nonce: NoncePair) -> Result<Scalar> {
-    let mut encoder = Encoder::new();
-    encoder.put_u8(VERSION);
+pub fn nonce_commitment<P: Profile>(
+    attempt: LeafAttempt,
+    reservation: &[u8],
+    nonce: NoncePair<P>,
+) -> Result<ScalarFor<P>> {
+    let mut encoder = Encoder::<P>::for_profile();
+    encoder.put_u8(P::WIRE_ID);
     encoder.put_bytes(b"nonce")?;
-    encoder.put_fixed(device.as_bytes());
+    encode_attempt(&mut encoder, attempt);
     encoder.put_bytes(reservation)?;
     encoder.put_point(nonce.hiding());
     encoder.put_point(nonce.binding());
-    hash::to_scalar(Domain::Nonce, &encoder.finish())
+    hash::to_scalar_for::<P>(Domain::Nonce, &encoder.finish())
 }
 
-fn encode_view_prefix(
-    encoder: &mut Encoder,
-    receiver: DeviceId,
+fn encode_view_prefix<P: Profile>(
+    encoder: &mut Encoder<P>,
+    receiver: LeafAttempt,
     session: SessionId,
     reservation: &[u8],
     count: usize,
 ) -> Result<()> {
-    encoder.put_u8(VERSION);
-    encoder.put_fixed(receiver.as_bytes());
+    encoder.put_u8(P::WIRE_ID);
+    encode_attempt(encoder, receiver);
     encoder.put_fixed(session.as_bytes());
     encoder.put_bytes(reservation)?;
     encoder.put_u16(u16::try_from(count).map_err(|_| Error::LengthOverflow)?);
     Ok(())
+}
+
+fn encode_attempt<P: Profile>(encoder: &mut Encoder<P>, attempt: LeafAttempt) {
+    encoder.put_fixed(attempt.device().as_bytes());
+    encoder.put_u64(attempt.sequence());
 }

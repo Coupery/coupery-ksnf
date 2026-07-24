@@ -1,48 +1,54 @@
 //! Domain-separated hashes.
 
-use k256::Scalar;
-use k256::elliptic_curve::hash2curve::{ExpandMsgXmd, hash_to_field};
-use sha2::Sha256;
+use crate::Result;
+use crate::algebra::ScalarFor;
+use crate::profile::Profile;
 
-use crate::{Error, Result};
+pub use crate::profile::HashDomain as Domain;
 
-/// A versioned hash domain.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum Domain {
-    /// Redistribution commitments.
-    Deal,
-    /// Private member records.
-    Member,
-    /// Nonce commitments.
-    Nonce,
-    /// FROST binding factors.
-    Bind,
-    /// Schnorr challenges.
-    Challenge,
+pub fn to_scalar_for<P: Profile>(domain: Domain, message: &[u8]) -> Result<ScalarFor<P>> {
+    P::hash_to_scalar(domain, message)
 }
 
-impl Domain {
-    /// Returns the fixed domain bytes.
-    #[must_use]
-    pub const fn as_bytes(self) -> &'static [u8] {
-        match self {
-            Self::Deal => b"KSNF/v1/deal",
-            Self::Member => b"KSNF/v1/member",
-            Self::Nonce => b"KSNF/v1/nonce",
-            Self::Bind => b"KSNF/v1/bind",
-            Self::Challenge => b"KSNF/v1/challenge",
+#[cfg(all(test, feature = "secp256k1"))]
+mod tests {
+    use super::{Domain, to_scalar_for};
+    use crate::Result;
+    use crate::algebra::Scalar;
+
+    #[test]
+    fn domains_are_stable_and_distinct() -> Result<()> {
+        let message = b"coupery-ksnf";
+        let outputs = [Domain::Deal, Domain::Member, Domain::Nonce, Domain::Bind]
+            .map(|domain| to_scalar_for::<crate::profile::Secp256k1>(domain, message))
+            .into_iter()
+            .collect::<Result<Vec<_>>>()?;
+
+        for (index, output) in outputs.iter().enumerate() {
+            assert!(!outputs[..index].contains(output));
         }
-    }
-}
 
-/// Hashes `message` to a secp256k1 scalar in `domain`.
-///
-/// # Errors
-///
-/// Returns [`Error::HashToField`] if the fixed domain is rejected.
-pub fn to_scalar(domain: Domain, message: &[u8]) -> Result<Scalar> {
-    let mut output = [Scalar::ZERO];
-    hash_to_field::<ExpandMsgXmd<Sha256>, Scalar>(&[message], &[domain.as_bytes()], &mut output)
-        .map_err(|_| Error::HashToField)?;
-    Ok(output[0])
+        let actual = outputs.iter().map(scalar_hex).collect::<Vec<_>>();
+        assert_eq!(
+            actual,
+            [
+                "8e7329b6c0000ddd0251a73c17b1fac1aec8983a92dd358582e289c9f8021bf5",
+                "d56eb6cdfaba507dc1c8bccb131094c1bd84d31369f7f6f3a127eade8ff6c184",
+                "258f61650d54e60d33eb587e37d423948795161e438f33b0efb9b1cdf0e84c06",
+                "bf0b18eef6d140af37fca842d45c1f84cb1178d568bdb413f16e5451457b12d3",
+            ]
+        );
+        Ok(())
+    }
+
+    fn scalar_hex(scalar: &Scalar) -> String {
+        const HEX: &[u8; 16] = b"0123456789abcdef";
+
+        let mut encoded = String::with_capacity(64);
+        for byte in scalar.to_bytes() {
+            encoded.push(char::from(HEX[usize::from(byte >> 4)]));
+            encoded.push(char::from(HEX[usize::from(byte & 0x0f)]));
+        }
+        encoded
+    }
 }

@@ -1,4 +1,8 @@
 //! Append-only transcripts with activation compare-and-set.
+//!
+//! Each terminal handle must name one exact canonical transcript or canonical
+//! bundle. Equal handles mean equal retained bytes. A counter or digest may
+//! index that mapping, but cannot replace it.
 
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -26,6 +30,10 @@ pub enum Terminal {
 }
 
 /// The common transcript and activation boundary.
+///
+/// An implementation must retain a permanent, injective mapping from every
+/// activated transcript or canonical bundle to its handle. It must never reuse a
+/// handle after restart, rollback, or branch replacement.
 pub trait LogAct {
     /// Starts one command or accepts its exact replay.
     ///
@@ -44,7 +52,8 @@ pub trait LogAct {
     ///
     /// # Errors
     ///
-    /// Returns an error for an altered replay, closed phase, or terminal log.
+    /// Returns an error for an altered replay, closed phase, stale predecessor,
+    /// or terminal log.
     fn post(
         &mut self,
         command: CommandId,
@@ -57,7 +66,8 @@ pub trait LogAct {
     ///
     /// # Errors
     ///
-    /// Returns an error when another phase is open or the log is terminal.
+    /// Returns an error when another phase is open, the predecessor is stale,
+    /// or the log is terminal.
     fn close_phase(&mut self, command: CommandId, phase: LogPhase) -> Result<()>;
 
     /// Terminates without installation.
@@ -69,12 +79,18 @@ pub trait LogAct {
 
     /// Installs after receipt close if the predecessor remains current.
     ///
+    /// Exact replay returns the original handle. A different canonical
+    /// transcript receives a different handle.
+    ///
     /// # Errors
     ///
     /// Returns an error before receipt close, after abort, or when stale.
     fn activate(&mut self, command: CommandId) -> Result<Terminal>;
 
     /// Installs several commands under one terminal handle.
+    ///
+    /// Exact replay returns the original handle. Bundle membership and every
+    /// command transcript form the handle's retained identity.
     ///
     /// # Errors
     ///
@@ -87,11 +103,15 @@ pub trait LogAct {
 }
 
 /// A deterministic in-memory `LogAct` implementation.
+///
+/// Handles are injective only within this retained instance. The counter is a
+/// test allocator, not a production handle scheme.
 #[derive(Default)]
 pub struct MemoryLog {
     current: BTreeMap<ScopeId, ActivationHandle>,
     transcripts: BTreeMap<CommandId, LogTranscript>,
     handles: BTreeSet<ActivationHandle>,
+    activations: BTreeMap<ActivationHandle, Vec<CommandId>>,
     next_handle: u64,
 }
 
@@ -178,38 +198,57 @@ impl LogAct for MemoryLog {
         role: &[u8],
         payload: &[u8],
     ) -> Result<()> {
-        let transcript = self.transcript_mut(command)?;
         let key = (phase, role.to_vec());
-        if let Some(existing) = transcript.posts.get(&key) {
-            return if existing == payload {
-                Ok(())
-            } else {
-                Err(Error::ReplayMismatch)
-            };
+        {
+            let transcript = self
+                .transcripts
+                .get(&command)
+                .ok_or(Error::ParticipantNotFound)?;
+            if let Some(existing) = transcript.posts.get(&key) {
+                return if existing == payload {
+                    Ok(())
+                } else {
+                    Err(Error::ReplayMismatch)
+                };
+            }
+            if transcript.terminal.is_some() {
+                return Err(Error::AlreadyTerminal);
+            }
+            if transcript.next_phase != Some(phase) {
+                return Err(Error::PhaseClosed);
+            }
+            if self.current.get(&transcript.scope) != Some(&transcript.predecessor) {
+                return Err(Error::StalePredecessor);
+            }
         }
-        if transcript.terminal.is_some() {
-            return Err(Error::AlreadyTerminal);
-        }
-        if transcript.next_phase != Some(phase) {
-            return Err(Error::PhaseClosed);
-        }
-        transcript.posts.insert(key, payload.to_vec());
+        self.transcript_mut(command)?
+            .posts
+            .insert(key, payload.to_vec());
         Ok(())
     }
 
     fn close_phase(&mut self, command: CommandId, phase: LogPhase) -> Result<()> {
-        let transcript = self.transcript_mut(command)?;
-        if matches!(transcript.next_phase, Some(next) if next > phase)
-            || transcript.next_phase.is_none()
-        {
-            return Ok(());
-        }
-        if transcript.terminal.is_some() {
-            return Err(Error::AlreadyTerminal);
-        }
-        match transcript.next_phase {
+        let next_phase = {
+            let transcript = self
+                .transcripts
+                .get(&command)
+                .ok_or(Error::ParticipantNotFound)?;
+            if matches!(transcript.next_phase, Some(next) if next > phase)
+                || transcript.next_phase.is_none()
+            {
+                return Ok(());
+            }
+            if transcript.terminal.is_some() {
+                return Err(Error::AlreadyTerminal);
+            }
+            if self.current.get(&transcript.scope) != Some(&transcript.predecessor) {
+                return Err(Error::StalePredecessor);
+            }
+            transcript.next_phase
+        };
+        match next_phase {
             Some(next) if next == phase => {
-                transcript.next_phase = match phase {
+                self.transcript_mut(command)?.next_phase = match phase {
                     LogPhase::Commit => Some(LogPhase::Open),
                     LogPhase::Open => Some(LogPhase::Receipt),
                     LogPhase::Receipt => None,
@@ -282,8 +321,14 @@ impl LogAct for MemoryLog {
                 }
             }
         }
+        let mut canonical_commands = commands.to_vec();
+        canonical_commands.sort_unstable();
         if let Some(handle) = replay {
-            return Ok(Terminal::Activated(handle));
+            return if self.activations.get(&handle) == Some(&canonical_commands) {
+                Ok(Terminal::Activated(handle))
+            } else {
+                Err(Error::CommandMismatch)
+            };
         }
 
         let handle = self.fresh_handle();
@@ -293,6 +338,7 @@ impl LogAct for MemoryLog {
         for (command, _) in records {
             self.transcript_mut(command)?.terminal = Some(Terminal::Activated(handle));
         }
+        self.activations.insert(handle, canonical_commands);
         Ok(Terminal::Activated(handle))
     }
 

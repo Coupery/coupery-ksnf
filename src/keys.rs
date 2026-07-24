@@ -2,32 +2,53 @@
 
 use core::fmt;
 
+use crate::Result;
 use crate::algebra::{Element, Point, SecretScalar};
+use crate::profile::{DefaultProfile, PointBytes, Profile};
 use crate::types::{ActivationHandle, InnerEpoch, OuterEpoch, PersonId, VaultId};
 
 macro_rules! point_type {
     ($(#[$meta:meta])* $name:ident) => {
         $(#[$meta])*
         #[derive(Clone, Copy, Eq, PartialEq)]
-        pub struct $name(Point);
+        pub struct $name<P: Profile = DefaultProfile>(Point<P>);
 
-        impl $name {
+        impl<P: Profile> $name<P> {
+            /// Parses a canonical nonidentity point.
+            ///
+            /// # Errors
+            ///
+            /// Returns an error for malformed, noncanonical, identity,
+            /// torsion, or non-prime-subgroup input.
+            pub fn from_bytes(bytes: &[u8]) -> Result<Self> {
+                Ok(Self(Point::from_bytes(bytes)?))
+            }
+
             /// Wraps a nonidentity point.
             #[must_use]
-            pub const fn new(point: Point) -> Self {
+            pub const fn new(point: Point<P>) -> Self {
                 Self(point)
             }
 
             /// Returns the point.
             #[must_use]
-            pub const fn point(self) -> Point {
+            pub const fn point(self) -> Point<P> {
                 self.0
+            }
+
+            /// Returns the canonical point encoding.
+            #[must_use]
+            pub fn to_bytes(self) -> PointBytes<P> {
+                self.0.to_bytes()
             }
         }
 
-        impl fmt::Debug for $name {
-            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-                f.debug_tuple(stringify!($name)).field(&self.0).finish()
+        impl<P: Profile> fmt::Debug for $name<P> {
+            fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+                formatter
+                    .debug_tuple(stringify!($name))
+                    .field(&self.0)
+                    .finish()
             }
         }
     };
@@ -48,18 +69,18 @@ point_type!(
 
 /// A public group element for one device share.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct SharePoint(Element);
+pub struct SharePoint<P: Profile = DefaultProfile>(Element<P>);
 
-impl SharePoint {
+impl<P: Profile> SharePoint<P> {
     /// Wraps a device share element.
     #[must_use]
-    pub fn new(element: impl Into<Element>) -> Self {
+    pub fn new(element: impl Into<Element<P>>) -> Self {
         Self(element.into())
     }
 
     /// Returns the element.
     #[must_use]
-    pub const fn element(self) -> Element {
+    pub const fn element(self) -> Element<P> {
         self.0
     }
 }
@@ -155,18 +176,28 @@ impl KeyEpoch {
 
 /// Computes `member - identity` for one device.
 #[must_use]
-pub fn anchor_share(member: &SecretScalar, identity: &SecretScalar) -> SecretScalar {
-    member.expose(|member| identity.expose(|identity| SecretScalar::new(*member - identity)))
+pub fn anchor_share<P: Profile>(
+    member: &SecretScalar<P>,
+    identity: &SecretScalar<P>,
+) -> SecretScalar<P> {
+    member.expose(|member| identity.expose(|identity| SecretScalar::new(*member - *identity)))
 }
 
 /// Recomputes a member signing share as `identity + anchor`.
 #[must_use]
-pub fn signing_share(identity: &SecretScalar, anchor: &SecretScalar) -> SecretScalar {
-    identity.expose(|identity| anchor.expose(|anchor| SecretScalar::new(*identity + anchor)))
+pub fn signing_share<P: Profile>(
+    identity: &SecretScalar<P>,
+    anchor: &SecretScalar<P>,
+) -> SecretScalar<P> {
+    identity.expose(|identity| anchor.expose(|anchor| SecretScalar::new(*identity + *anchor)))
 }
 
 /// Checks the affine relation between public share points.
 #[must_use]
-pub fn verify_anchor(identity: SharePoint, anchor: Element, member: SharePoint) -> bool {
+pub fn verify_anchor<P: Profile>(
+    identity: SharePoint<P>,
+    anchor: Element<P>,
+    member: SharePoint<P>,
+) -> bool {
     identity.element() + anchor == member.element()
 }

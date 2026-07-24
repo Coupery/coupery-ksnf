@@ -28,7 +28,7 @@ use super::{VectorCase, hex, vector};
 type AnyResult<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 type PreparedComponent = (Vec<PendingShare>, CandidateView);
 
-#[allow(clippy::too_many_lines)]
+#[expect(clippy::too_many_lines, reason = "Keeps one protocol path together.")]
 pub fn inner() -> AnyResult<VectorCase> {
     let vault = VaultId::new([0x51; 32]);
     let person = PersonId::new([0x61; 32]);
@@ -142,7 +142,7 @@ pub fn inner() -> AnyResult<VectorCase> {
     ))
 }
 
-#[allow(clippy::too_many_lines)]
+#[expect(clippy::too_many_lines, reason = "Keeps one protocol path together.")]
 pub fn outer() -> AnyResult<VectorCase> {
     let vault = VaultId::new([0x52; 32]);
     let person_1 = PersonId::new([0x61; 32]);
@@ -167,10 +167,11 @@ pub fn outer() -> AnyResult<VectorCase> {
         old_session,
         0xc2,
     )?;
-    old.leaf
-        .reserve(old_session, &old_reservation, &old.outer)?;
+    let old_attempt = old
+        .leaf
+        .reserve(old_session, 0, &old_reservation, &old.outer)?;
     old.leaf.commit(
-        old_session,
+        old_attempt,
         &old_reservation,
         &mut ChaCha20Rng::from_seed([12; 32]),
     )?;
@@ -263,7 +264,7 @@ pub fn outer() -> AnyResult<VectorCase> {
         AnchorId::new(vault, person_1, identity_handle, handle),
     );
     old.leaf.activate_outer(new_epoch, member_1_share)?;
-    assert!(old.leaf.is_tombstoned(old_session));
+    assert!(old.leaf.is_closed(old_attempt));
 
     let new_outer = OuterSupport::new(vec![
         PersonParticipant::new(
@@ -326,7 +327,7 @@ pub fn outer() -> AnyResult<VectorCase> {
     )?
     .to_bytes(new_session, 200)?;
     old.leaf
-        .reserve(new_session, &new_reservation, &new_outer)?;
+        .reserve(new_session, 0, &new_reservation, &new_outer)?;
     assert_eq!(old.leaf.stage(), Some(LeafStage::Reserved));
 
     Ok(vector(
@@ -348,7 +349,7 @@ pub fn outer() -> AnyResult<VectorCase> {
             },
             "new_root_prepackage": hex(prepackage.to_bytes()?),
             "new_session_reservation": hex(new_reservation.as_slice()),
-            "old_live_session_tombstoned": old.leaf.is_tombstoned(old_session),
+            "old_attempt_closed": old.leaf.is_closed(old_attempt),
             "test_only_secret": {
                 "candidate_rng_seed": hex([13_u8; 32]),
                 "old_commit_rng_seed": hex([12_u8; 32]),
@@ -358,7 +359,7 @@ pub fn outer() -> AnyResult<VectorCase> {
     ))
 }
 
-#[allow(clippy::too_many_lines)]
+#[expect(clippy::too_many_lines, reason = "Keeps one protocol path together.")]
 pub fn invalid() -> AnyResult<VectorCase> {
     let source = DeviceId::new([0x74; 32]);
     let target = DeviceId::new([0x75; 32]);
@@ -378,6 +379,20 @@ pub fn invalid() -> AnyResult<VectorCase> {
     let altered_command = command(scope, 0xb5, predecessor, 35, shape.clone(), roles.clone())?;
     let altered_contributions =
         one_target_contributions(&altered_command, source, target, 35, &mut rng)?;
+    let mut opening_log = MemoryLog::default();
+    opening_log.install_genesis(scope, predecessor)?;
+    let mut opening_candidate = Candidate::new(altered_command.clone(), &mut opening_log)?;
+    for contribution in &altered_contributions {
+        opening_candidate.commit(
+            contribution.role(),
+            contribution.commitment(),
+            &mut opening_log,
+        )?;
+    }
+    opening_candidate.close_commitments(&mut opening_log)?;
+    let opening = opening_candidate
+        .open_contribution(&altered_contributions[0], &mut opening_log)?
+        .opening();
     let mut altered_log = MemoryLog::default();
     altered_log.install_genesis(scope, predecessor)?;
     let mut altered = Candidate::new(altered_command.clone(), &mut altered_log)?;
@@ -389,7 +404,6 @@ pub fn invalid() -> AnyResult<VectorCase> {
         )?;
     }
     altered.close_commitments(&mut altered_log)?;
-    let opening = altered_contributions[0].opening();
     let altered_opening = Opening::new(
         opening.role(),
         opening.points().clone(),
@@ -406,7 +420,7 @@ pub fn invalid() -> AnyResult<VectorCase> {
     let wrong_degree = expect_error(
         &ContributionPoints::Single(vec![
             Element::from_scalar(Scalar::from(35_u64)),
-            Element::GENERATOR,
+            Element::generator(),
         ])
         .validate(&shape, Element::from_scalar(Scalar::from(35_u64))),
     )?;
@@ -415,8 +429,14 @@ pub fn invalid() -> AnyResult<VectorCase> {
         1,
         vec![OuterTarget::new(
             linked_person,
-            Node::from_u64(1)?,
-            SingleShape::new(1, vec![TargetDevice::new(target, Node::from_u64(1)?)])?,
+            Node::<coupery_ksnf::profile::Secp256k1>::from_u64(1)?,
+            SingleShape::new(
+                1,
+                vec![TargetDevice::new(
+                    target,
+                    Node::<coupery_ksnf::profile::Secp256k1>::from_u64(1)?,
+                )],
+            )?,
         )],
     )?);
     let wrong_linkage = expect_error(
@@ -445,7 +465,7 @@ pub fn invalid() -> AnyResult<VectorCase> {
     }
     missing.close_commitments(&mut missing_log)?;
     for contribution in &missing_contributions {
-        missing.open(contribution.opening(), &mut missing_log)?;
+        let _released = missing.open_contribution(contribution, &mut missing_log)?;
     }
     let missing_view = missing.close_openings(&mut missing_log)?;
     let mut accumulator = TargetAccumulator::new(missing_view, TargetId::Single(target))?;
@@ -522,7 +542,7 @@ fn old_leaf(
         )],
     )?;
     let genesis =
-        ValidatedPublicGenesis::from_parts(vault, constant_polynomial(101)?, vec![public_person])?;
+        ValidatedPublicGenesis::validate(vault, constant_polynomial(101)?, vec![public_person])?;
     let outer = genesis.outer_support(&[person])?;
     let inner = genesis.inner_support(person, &[device])?;
     let epoch = KeyEpoch::new(
@@ -584,14 +604,15 @@ fn prepare(
         candidate.commit(contribution.role(), contribution.commitment(), log)?;
     }
     candidate.close_commitments(log)?;
+    let mut released = Vec::with_capacity(contributions.len());
     for contribution in contributions {
-        candidate.open(contribution.opening(), log)?;
+        released.push(candidate.open_contribution(contribution, log)?);
     }
     let view = candidate.close_openings(log)?;
     let mut pending = Vec::new();
     for target in command.shape().targets() {
         let mut accumulator = TargetAccumulator::new(view.clone(), target)?;
-        for contribution in contributions {
+        for contribution in &released {
             accumulator.receive(contribution.share(command, target)?)?;
         }
         let (receipt, share) = accumulator.finish()?.into_parts();
@@ -623,14 +644,17 @@ fn prepare_inner_bundle(
         }
     }
     bundle.close_commitments(log)?;
+    let mut released = Vec::with_capacity(components.len());
     for (command, contributions) in components {
+        let mut component = Vec::with_capacity(contributions.len());
         for contribution in *contributions {
-            bundle.open(command.id(), contribution.opening(), log)?;
+            component.push(bundle.open_contribution(command.id(), contribution, log)?);
         }
+        released.push(component);
     }
     let views = bundle.close_openings(log)?;
     let mut prepared = Vec::with_capacity(components.len());
-    for (command, contributions) in components {
+    for ((command, _), released) in components.iter().zip(&released) {
         let view = views
             .iter()
             .find_map(|(id, view)| (*id == command.id()).then_some(view))
@@ -638,7 +662,7 @@ fn prepare_inner_bundle(
         let mut pending = Vec::new();
         for target in command.shape().targets() {
             let mut accumulator = TargetAccumulator::new(view.clone(), target)?;
-            for contribution in *contributions {
+            for contribution in released {
                 accumulator.receive(contribution.share(command, target)?)?;
             }
             let (receipt, share) = accumulator.finish()?.into_parts();

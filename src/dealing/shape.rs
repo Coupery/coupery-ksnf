@@ -1,26 +1,31 @@
 use std::collections::BTreeSet;
 
-use crate::algebra::{Element, Point, Scalar};
+use frost_core::{Field, Group};
+
+use crate::algebra::{Element, Point};
 use crate::encoding::{Decoder, Encoder};
 use crate::keys::SharePoint;
+use crate::profile::{DefaultProfile, Profile};
 use crate::shamir::Node;
 use crate::support::SourceWeight;
 use crate::types::{ActivationHandle, CommandId, DeviceId, PersonId, ScopeId};
 use crate::{Error, Result};
 
-use super::{VERSION, count_u16};
+use super::count_u16;
+
+type FieldOf<P> = <<P as Profile>::Group as Group>::Field;
 
 /// One target device in a single sharing.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct TargetDevice {
+pub struct TargetDevice<P: Profile = DefaultProfile> {
     device: DeviceId,
-    node: Node,
+    node: Node<P>,
 }
 
-impl TargetDevice {
+impl<P: Profile> TargetDevice<P> {
     /// Creates a target device.
     #[must_use]
-    pub const fn new(device: DeviceId, node: Node) -> Self {
+    pub const fn new(device: DeviceId, node: Node<P>) -> Self {
         Self { device, node }
     }
 
@@ -32,25 +37,25 @@ impl TargetDevice {
 
     /// Returns the Shamir node.
     #[must_use]
-    pub const fn node(self) -> Node {
+    pub const fn node(self) -> Node<P> {
         self.node
     }
 }
 
 /// A target shape for one Shamir sharing.
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct SingleShape {
+pub struct SingleShape<P: Profile = DefaultProfile> {
     threshold: u16,
-    devices: Vec<TargetDevice>,
+    devices: Vec<TargetDevice<P>>,
 }
 
-impl SingleShape {
+impl<P: Profile> SingleShape<P> {
     /// Validates a single-sharing target shape.
     ///
     /// # Errors
     ///
     /// Returns an error for zero threshold, too few devices, or duplicates.
-    pub fn new(threshold: u16, mut devices: Vec<TargetDevice>) -> Result<Self> {
+    pub fn new(threshold: u16, mut devices: Vec<TargetDevice<P>>) -> Result<Self> {
         if threshold == 0 || usize::from(threshold) > devices.len() {
             return Err(Error::SupportMismatch);
         }
@@ -67,11 +72,11 @@ impl SingleShape {
 
     /// Returns the sorted target devices.
     #[must_use]
-    pub fn devices(&self) -> &[TargetDevice] {
+    pub fn devices(&self) -> &[TargetDevice<P>] {
         &self.devices
     }
 
-    fn device(&self, device: DeviceId) -> Result<TargetDevice> {
+    fn device(&self, device: DeviceId) -> Result<TargetDevice<P>> {
         self.devices
             .binary_search_by_key(&device, |entry| entry.device)
             .map(|index| self.devices[index])
@@ -81,16 +86,16 @@ impl SingleShape {
 
 /// One person's target sharing in an outer redistribution.
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct OuterTarget {
+pub struct OuterTarget<P: Profile = DefaultProfile> {
     person: PersonId,
-    node: Node,
-    inner: SingleShape,
+    node: Node<P>,
+    inner: SingleShape<P>,
 }
 
-impl OuterTarget {
+impl<P: Profile> OuterTarget<P> {
     /// Creates one outer target.
     #[must_use]
-    pub const fn new(person: PersonId, node: Node, inner: SingleShape) -> Self {
+    pub const fn new(person: PersonId, node: Node<P>, inner: SingleShape<P>) -> Self {
         Self {
             person,
             node,
@@ -106,32 +111,32 @@ impl OuterTarget {
 
     /// Returns the outer Shamir node.
     #[must_use]
-    pub const fn node(&self) -> Node {
+    pub const fn node(&self) -> Node<P> {
         self.node
     }
 
     /// Returns the inner target shape.
     #[must_use]
-    pub const fn inner(&self) -> &SingleShape {
+    pub const fn inner(&self) -> &SingleShape<P> {
         &self.inner
     }
 }
 
 /// A composed outer and inner target shape.
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct OuterShape {
+pub struct OuterShape<P: Profile = DefaultProfile> {
     threshold: u16,
-    people: Vec<OuterTarget>,
+    people: Vec<OuterTarget<P>>,
 }
 
-impl OuterShape {
+impl<P: Profile> OuterShape<P> {
     /// Validates a composed target shape.
     ///
     /// # Errors
     ///
     /// Returns an error for zero threshold, too few people, or duplicate
     /// people, nodes, or devices.
-    pub fn new(threshold: u16, mut people: Vec<OuterTarget>) -> Result<Self> {
+    pub fn new(threshold: u16, mut people: Vec<OuterTarget<P>>) -> Result<Self> {
         if threshold == 0 || usize::from(threshold) > people.len() {
             return Err(Error::SupportMismatch);
         }
@@ -167,11 +172,11 @@ impl OuterShape {
 
     /// Returns the sorted person targets.
     #[must_use]
-    pub fn people(&self) -> &[OuterTarget] {
+    pub fn people(&self) -> &[OuterTarget<P>] {
         &self.people
     }
 
-    fn person(&self, person: PersonId) -> Result<&OuterTarget> {
+    fn person(&self, person: PersonId) -> Result<&OuterTarget<P>> {
         self.people
             .binary_search_by_key(&person, |entry| entry.person)
             .map(|index| &self.people[index])
@@ -181,14 +186,14 @@ impl OuterShape {
 
 /// A redistribution target shape.
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub enum TargetShape {
+pub enum TargetShape<P: Profile = DefaultProfile> {
     /// One Shamir sharing.
-    Single(SingleShape),
+    Single(SingleShape<P>),
     /// An outer sharing linked to inner member sharings.
-    Outer(OuterShape),
+    Outer(OuterShape<P>),
 }
 
-impl TargetShape {
+impl<P: Profile> TargetShape<P> {
     /// Returns every target identifier in canonical order.
     #[must_use]
     pub fn targets(&self) -> Vec<TargetId> {
@@ -211,7 +216,7 @@ impl TargetShape {
         }
     }
 
-    pub(crate) fn target_node(&self, target: TargetId) -> Result<Node> {
+    pub(crate) fn target_node(&self, target: TargetId) -> Result<Node<P>> {
         match (self, target) {
             (Self::Single(shape), TargetId::Single(device)) => Ok(shape.device(device)?.node),
             (Self::Outer(shape), TargetId::Outer { person, device }) => {
@@ -221,7 +226,7 @@ impl TargetShape {
         }
     }
 
-    fn encode(&self, encoder: &mut Encoder) -> Result<()> {
+    fn encode(&self, encoder: &mut Encoder<P>) -> Result<()> {
         match self {
             Self::Single(shape) => {
                 encoder.put_u8(0);
@@ -265,7 +270,7 @@ impl TargetId {
         }
     }
 
-    pub(super) fn encode(self, encoder: &mut Encoder) {
+    pub(super) fn encode<P: Profile>(self, encoder: &mut Encoder<P>) {
         match self {
             Self::Single(device) => {
                 encoder.put_u8(0);
@@ -279,7 +284,7 @@ impl TargetId {
         }
     }
 
-    pub(super) fn decode(decoder: &mut Decoder<'_>) -> Result<Self> {
+    pub(super) fn decode<P: Profile>(decoder: &mut Decoder<'_, P>) -> Result<Self> {
         match decoder.get_u8()? {
             0 => Ok(Self::Single(DeviceId::new(decoder.get_fixed()?))),
             1 => Ok(Self::Outer {
@@ -309,7 +314,7 @@ impl RoleId {
         }
     }
 
-    pub(super) fn encode(self, encoder: &mut Encoder) {
+    pub(super) fn encode<P: Profile>(self, encoder: &mut Encoder<P>) {
         match self {
             Self::Source(device) => {
                 encoder.put_u8(0);
@@ -322,7 +327,7 @@ impl RoleId {
         }
     }
 
-    pub(super) fn decode(decoder: &mut Decoder<'_>) -> Result<Self> {
+    pub(super) fn decode<P: Profile>(decoder: &mut Decoder<'_, P>) -> Result<Self> {
         match decoder.get_u8()? {
             0 => Ok(Self::Source(DeviceId::new(decoder.get_fixed()?))),
             1 => Ok(Self::Refresher(DeviceId::new(decoder.get_fixed()?))),
@@ -330,8 +335,8 @@ impl RoleId {
         }
     }
 
-    pub(super) fn bytes(self) -> Vec<u8> {
-        let mut encoder = Encoder::new();
+    pub(super) fn bytes<P: Profile>(self) -> Vec<u8> {
+        let mut encoder = Encoder::<P>::for_profile();
         self.encode(&mut encoder);
         encoder.finish()
     }
@@ -339,19 +344,19 @@ impl RoleId {
 
 /// One mandatory role and its required constant point.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct RoleSpec {
+pub struct RoleSpec<P: Profile = DefaultProfile> {
     pub(super) role: RoleId,
-    pub(super) constant: Element,
-    pub(super) source: Option<(SharePoint, SourceWeight)>,
+    pub(super) constant: Element<P>,
+    pub(super) source: Option<(SharePoint<P>, SourceWeight<P>)>,
 }
 
-impl RoleSpec {
+impl<P: Profile> RoleSpec<P> {
     /// Creates a source role from a support-derived weight.
     ///
     /// # Errors
     ///
     /// Returns [`Error::ParticipantMismatch`] when the device differs.
-    pub fn source(device: DeviceId, share: SharePoint, weight: SourceWeight) -> Result<Self> {
+    pub fn source(device: DeviceId, share: SharePoint<P>, weight: SourceWeight<P>) -> Result<Self> {
         if device != weight.device() {
             return Err(Error::ParticipantMismatch);
         }
@@ -364,10 +369,10 @@ impl RoleSpec {
 
     /// Creates a zero-constant refresher role.
     #[must_use]
-    pub const fn refresher(device: DeviceId) -> Self {
+    pub fn refresher(device: DeviceId) -> Self {
         Self {
             role: RoleId::Refresher(device),
-            constant: Element::IDENTITY,
+            constant: Element::identity(),
             source: None,
         }
     }
@@ -380,23 +385,23 @@ impl RoleSpec {
 
     /// Returns the required constant point.
     #[must_use]
-    pub const fn constant(self) -> Element {
+    pub const fn constant(self) -> Element<P> {
         self.constant
     }
 }
 
 /// Immutable parameters for one redistribution candidate.
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct Command {
+pub struct Command<P: Profile = DefaultProfile> {
     pub(super) scope: ScopeId,
     pub(super) command: CommandId,
     pub(super) predecessor: ActivationHandle,
-    pub(super) anchor: Point,
-    pub(super) shape: TargetShape,
-    pub(super) roles: Vec<RoleSpec>,
+    pub(super) anchor: Point<P>,
+    pub(super) shape: TargetShape<P>,
+    pub(super) roles: Vec<RoleSpec<P>>,
 }
 
-impl Command {
+impl<P: Profile> Command<P> {
     /// Validates one candidate command.
     ///
     /// # Errors
@@ -407,9 +412,9 @@ impl Command {
         scope: ScopeId,
         command: CommandId,
         predecessor: ActivationHandle,
-        anchor: Point,
-        shape: TargetShape,
-        mut roles: Vec<RoleSpec>,
+        anchor: Point<P>,
+        shape: TargetShape<P>,
+        mut roles: Vec<RoleSpec<P>>,
     ) -> Result<Self> {
         roles.sort_unstable_by_key(|role| role.role);
         if roles.is_empty() {
@@ -423,7 +428,7 @@ impl Command {
         let source_sum = roles
             .iter()
             .filter(|role| matches!(role.role, RoleId::Source(_)))
-            .fold(Element::IDENTITY, |sum, role| sum + role.constant);
+            .fold(Element::identity(), |sum, role| sum + role.constant);
         if source_sum != Element::from(anchor) {
             return Err(Error::ShareMismatch);
         }
@@ -458,8 +463,8 @@ impl Command {
     ///
     /// Returns [`Error::LengthOverflow`] for oversized collections.
     pub fn to_bytes(&self) -> Result<Vec<u8>> {
-        let mut encoder = Encoder::new();
-        encoder.put_u8(VERSION);
+        let mut encoder = Encoder::<P>::for_profile();
+        encoder.put_u8(P::WIRE_ID);
         encoder.put_fixed(self.scope.as_bytes());
         encoder.put_fixed(self.command.as_bytes());
         encoder.put_fixed(self.predecessor.as_bytes());
@@ -473,8 +478,8 @@ impl Command {
                 encoder.put_element(share.element());
                 encoder.put_scalar(&weight.scalar());
             } else {
-                encoder.put_element(Element::IDENTITY);
-                encoder.put_scalar(&Scalar::ZERO);
+                encoder.put_element(Element::identity());
+                encoder.put_scalar(&FieldOf::<P>::zero());
             }
         }
         Ok(encoder.finish())
@@ -513,23 +518,23 @@ impl Command {
 
     /// Returns the stable anchored point.
     #[must_use]
-    pub const fn anchor(&self) -> Point {
+    pub const fn anchor(&self) -> Point<P> {
         self.anchor
     }
 
     /// Returns the target shape.
     #[must_use]
-    pub const fn shape(&self) -> &TargetShape {
+    pub const fn shape(&self) -> &TargetShape<P> {
         &self.shape
     }
 
     /// Returns the sorted mandatory roles.
     #[must_use]
-    pub fn roles(&self) -> &[RoleSpec] {
+    pub fn roles(&self) -> &[RoleSpec<P>] {
         &self.roles
     }
 
-    pub(super) fn role(&self, role: RoleId) -> Result<&RoleSpec> {
+    pub(super) fn role(&self, role: RoleId) -> Result<&RoleSpec<P>> {
         self.roles
             .binary_search_by_key(&role, |entry| entry.role)
             .map(|index| &self.roles[index])
@@ -537,7 +542,7 @@ impl Command {
     }
 }
 
-fn encode_single_shape(encoder: &mut Encoder, shape: &SingleShape) -> Result<()> {
+fn encode_single_shape<P: Profile>(encoder: &mut Encoder<P>, shape: &SingleShape<P>) -> Result<()> {
     encoder.put_u16(shape.threshold);
     encoder.put_u16(count_u16(shape.devices.len())?);
     for device in &shape.devices {
@@ -547,7 +552,7 @@ fn encode_single_shape(encoder: &mut Encoder, shape: &SingleShape) -> Result<()>
     Ok(())
 }
 
-fn reject_device_duplicates(devices: &[TargetDevice]) -> Result<()> {
+fn reject_device_duplicates<P: Profile>(devices: &[TargetDevice<P>]) -> Result<()> {
     for (index, device) in devices.iter().enumerate() {
         if devices[..index]
             .iter()

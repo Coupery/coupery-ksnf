@@ -1,4 +1,4 @@
-#![allow(missing_docs)]
+//! Activation-log tests.
 
 use coupery_ksnf::log_act::{LogAct, LogPhase, MemoryLog, Terminal};
 use coupery_ksnf::types::{ActivationHandle, CommandId, ScopeId};
@@ -35,10 +35,15 @@ fn activation_is_one_predecessor_compare_and_set() -> Result<()> {
         Err(Error::ReplayMismatch)
     );
 
-    log.close_phase(command_2, LogPhase::Commit)?;
-    log.close_phase(command_2, LogPhase::Open)?;
-    log.close_phase(command_2, LogPhase::Receipt)?;
-    assert_eq!(log.activate(command_2), Err(Error::StalePredecessor));
+    assert_eq!(
+        log.post(command_2, LogPhase::Commit, b"role", b"commit"),
+        Err(Error::StalePredecessor)
+    );
+    assert_eq!(
+        log.close_phase(command_2, LogPhase::Commit),
+        Err(Error::StalePredecessor)
+    );
+    assert_eq!(log.activate(command_2), Err(Error::PhaseClosed));
     assert_eq!(log.abort(command_2)?, Terminal::Aborted);
     assert_eq!(log.current(scope), Some(handle));
     assert_eq!(
@@ -70,8 +75,49 @@ fn bundle_activation_advances_every_scope_or_none() -> Result<()> {
     assert_eq!(log.current(scope_1), Some(handle));
     assert_eq!(log.current(scope_2), Some(handle));
     assert_eq!(
-        log.activate_bundle(&[command_1, command_2])?,
+        log.activate_bundle(&[command_2, command_1])?,
         Terminal::Activated(handle)
+    );
+    assert_eq!(
+        log.activate_bundle(&[command_1]),
+        Err(Error::CommandMismatch)
+    );
+    Ok(())
+}
+
+#[test]
+fn memory_handles_are_stable_and_injective() -> Result<()> {
+    let scope_1 = ScopeId::new([0x41; 32]);
+    let scope_2 = ScopeId::new([0x42; 32]);
+    let predecessor_1 = ActivationHandle::new([0x51; 32]);
+    let predecessor_2 = ActivationHandle::new([0x52; 32]);
+    let command_1 = CommandId::new([0x61; 32]);
+    let command_2 = CommandId::new([0x62; 32]);
+    let mut log = MemoryLog::default();
+    log.install_genesis(scope_1, predecessor_1)?;
+    log.install_genesis(scope_2, predecessor_2)?;
+    log.begin(scope_1, command_1, predecessor_1, b"first transcript")?;
+    log.begin(scope_2, command_2, predecessor_2, b"second transcript")?;
+    close_all(&mut log, command_1)?;
+    close_all(&mut log, command_2)?;
+
+    let Terminal::Activated(handle_1) = log.activate(command_1)? else {
+        return Err(Error::InvalidTranscript);
+    };
+    assert_eq!(log.activate(command_1)?, Terminal::Activated(handle_1));
+    let Terminal::Activated(handle_2) = log.activate(command_2)? else {
+        return Err(Error::InvalidTranscript);
+    };
+    assert_ne!(handle_1, handle_2);
+    assert_eq!(
+        log.transcript(command_1)
+            .and_then(coupery_ksnf::log_act::LogTranscript::terminal),
+        Some(Terminal::Activated(handle_1))
+    );
+    assert_eq!(
+        log.transcript(command_2)
+            .and_then(coupery_ksnf::log_act::LogTranscript::terminal),
+        Some(Terminal::Activated(handle_2))
     );
     Ok(())
 }

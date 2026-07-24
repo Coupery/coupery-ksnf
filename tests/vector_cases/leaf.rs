@@ -15,7 +15,8 @@ use coupery_ksnf::transcript::{
     RootPackage, RootPrepackage, SigningContext,
 };
 use coupery_ksnf::types::{
-    ActivationHandle, CommandId, DeviceId, InnerEpoch, OuterEpoch, PersonId, SessionId, VaultId,
+    ActivationHandle, CommandId, DeviceId, InnerEpoch, LeafAttempt, OuterEpoch, PersonId,
+    SessionId, VaultId,
 };
 use coupery_ksnf::{Error, Result};
 use rand_chacha::ChaCha20Rng;
@@ -30,28 +31,28 @@ pub fn interleaving() -> AnyResult<VectorCase> {
     let fixture = make_fixture(3, 1)?;
     let mut leaf_1 = at("leaf 1", fixture.leaf(1))?;
     let mut leaf_2 = at("leaf 2", fixture.leaf(2))?;
-    at(
+    let attempt_1 = at(
         "reserve 1",
-        leaf_1.reserve(fixture.session, &fixture.reservation, &fixture.outer),
+        leaf_1.reserve(fixture.session, 0, &fixture.reservation, &fixture.outer),
     )?;
-    at(
+    let attempt_2 = at(
         "reserve 2",
-        leaf_2.reserve(fixture.session, &fixture.reservation, &fixture.outer),
+        leaf_2.reserve(fixture.session, 0, &fixture.reservation, &fixture.outer),
     )?;
+    let attempts = [attempt_1, attempt_2, LeafAttempt::new(fixture.device(3), 0)];
     let mut rng_1 = ChaCha20Rng::from_seed([1; 32]);
     let mut rng_2 = ChaCha20Rng::from_seed([2; 32]);
-    let commitment_1 = leaf_1.commit(fixture.session, &fixture.reservation, &mut rng_1)?;
-    let commitment_2 = leaf_2.commit(fixture.session, &fixture.reservation, &mut rng_2)?;
+    let commitment_1 = leaf_1.commit(attempt_1, &fixture.reservation, &mut rng_1)?;
+    let commitment_2 = leaf_2.commit(attempt_2, &fixture.reservation, &mut rng_2)?;
 
     let corrupt_a = Nonce::new(Scalar::from(31_u64), Scalar::from(37_u64))?.commitments()?;
     let corrupt_b = Nonce::new(Scalar::from(41_u64), Scalar::from(43_u64))?.commitments()?;
-    let corrupt_commitment_a =
-        nonce_commitment(fixture.device(3), &fixture.reservation, corrupt_a)?;
-    let corrupt_commitment_b =
-        nonce_commitment(fixture.device(3), &fixture.reservation, corrupt_b)?;
+    let corrupt_commitment_a = nonce_commitment(attempts[2], &fixture.reservation, corrupt_a)?;
+    let corrupt_commitment_b = nonce_commitment(attempts[2], &fixture.reservation, corrupt_b)?;
     let receiver_1_deliveries = commitments(
         &fixture,
-        fixture.device(1),
+        attempts,
+        attempt_1,
         commitment_1,
         commitment_2,
         corrupt_commitment_a,
@@ -60,16 +61,14 @@ pub fn interleaving() -> AnyResult<VectorCase> {
         "commitment view 1",
         CommitmentView::new(&fixture.inner, receiver_1_deliveries.clone()),
     )?;
-    let pair_1 = at(
-        "reveal 1",
-        leaf_1.reveal(fixture.session, receiver_1_deliveries),
-    )?;
+    let pair_1 = at("reveal 1", leaf_1.reveal(attempt_1, receiver_1_deliveries))?;
     assert_eq!(leaf_1.stage(), Some(LeafStage::Held));
     assert_eq!(leaf_2.stage(), Some(LeafStage::Committed));
 
     let receiver_2_deliveries = commitments(
         &fixture,
-        fixture.device(2),
+        attempts,
+        attempt_2,
         commitment_1,
         commitment_2,
         corrupt_commitment_b,
@@ -78,16 +77,13 @@ pub fn interleaving() -> AnyResult<VectorCase> {
         "commitment view 2",
         CommitmentView::new(&fixture.inner, receiver_2_deliveries.clone()),
     )?;
-    let pair_2 = at(
-        "reveal 2",
-        leaf_2.reveal(fixture.session, receiver_2_deliveries),
-    )?;
-    let openings_1 = openings(&fixture, fixture.device(1), &pair_1, &pair_2, &corrupt_a);
-    let openings_2 = openings(&fixture, fixture.device(2), &pair_1, &pair_2, &corrupt_b);
+    let pair_2 = at("reveal 2", leaf_2.reveal(attempt_2, receiver_2_deliveries))?;
+    let openings_1 = openings(&fixture, attempts, attempt_1, &pair_1, &pair_2, &corrupt_a);
+    let openings_2 = openings(&fixture, attempts, attempt_2, &pair_1, &pair_2, &corrupt_b);
     let opening_view_1 = OpeningView::new(&fixture.inner, openings_1.clone())?;
     let opening_view_2 = OpeningView::new(&fixture.inner, openings_2.clone())?;
-    let aggregate_1 = at("fix 1", leaf_1.fix(fixture.session, openings_1))?;
-    let aggregate_2 = at("fix 2", leaf_2.fix(fixture.session, openings_2))?;
+    let aggregate_1 = at("fix 1", leaf_1.fix(attempt_1, openings_1))?;
+    let aggregate_2 = at("fix 2", leaf_2.fix(attempt_2, openings_2))?;
     assert_ne!(aggregate_1, aggregate_2);
 
     Ok(vector(
@@ -103,6 +99,7 @@ pub fn interleaving() -> AnyResult<VectorCase> {
                 scalar_hex(corrupt_commitment_b)
             ],
             "format": "coupery-ksnf-v1",
+            "leaf_attempts": attempts.map(LeafAttempt::sequence),
             "local_aggregates": [pair_json(&aggregate_1), pair_json(&aggregate_2)],
             "opening_views": [
                 hex(opening_view_1.to_bytes()?.as_slice()),
@@ -131,39 +128,42 @@ pub fn lifecycle() -> AnyResult<VectorCase> {
     let fixture = make_fixture(1, 2)?;
     let mut leaf = fixture.leaf(1)?;
     let mut trace = Vec::new();
-    leaf.reserve(fixture.session, &fixture.reservation, &fixture.outer)?;
+    let attempt = leaf.reserve(fixture.session, 0, &fixture.reservation, &fixture.outer)?;
     trace.push(step("reserve", "reserved", "ok"));
-    leaf.reserve(fixture.session, &fixture.reservation, &fixture.outer)?;
+    assert_eq!(
+        leaf.reserve(fixture.session, 0, &fixture.reservation, &fixture.outer)?,
+        attempt
+    );
     trace.push(step("reserve exact replay", "reserved", "ok"));
     let mut rng = ChaCha20Rng::from_seed([7; 32]);
-    let commitment = leaf.commit(fixture.session, &fixture.reservation, &mut rng)?;
+    let commitment = leaf.commit(attempt, &fixture.reservation, &mut rng)?;
     trace.push(step("commit", "committed", "ok"));
     let mut replay_rng = ChaCha20Rng::from_seed([8; 32]);
-    let replay = leaf.commit(fixture.session, &fixture.reservation, &mut replay_rng)?;
+    let replay = leaf.commit(attempt, &fixture.reservation, &mut replay_rng)?;
     assert_eq!(commitment, replay);
     trace.push(step("commit exact replay", "committed", "ok"));
     let fresh = SessionId::new([0xfe; 32]);
-    let busy = error_code(&leaf.reserve(fresh, &fixture.reservation, &fixture.outer))?;
+    let busy = error_code(&leaf.reserve(fresh, 0, &fixture.reservation, &fixture.outer))?;
     trace.push(step("fresh session while live", "committed", busy));
     let delivery = AuthenticatedCommitment::new(
-        fixture.device(1),
-        fixture.device(1),
+        attempt,
+        attempt,
         fixture.session,
         &fixture.reservation,
         commitment,
     );
-    let pair = leaf.reveal(fixture.session, vec![delivery.clone()])?;
-    assert_eq!(leaf.reveal(fixture.session, vec![delivery])?, pair);
+    let pair = leaf.reveal(attempt, vec![delivery.clone()])?;
+    assert_eq!(leaf.reveal(attempt, vec![delivery])?, pair);
     trace.push(step("reveal and exact replay", "held", "ok"));
     let opening = AuthenticatedOpening::new(
-        fixture.device(1),
-        fixture.device(1),
+        attempt,
+        attempt,
         fixture.session,
         &fixture.reservation,
         pair,
     );
-    assert_eq!(leaf.fix(fixture.session, vec![opening.clone()])?, pair);
-    assert_eq!(leaf.fix(fixture.session, vec![opening])?, pair);
+    assert_eq!(leaf.fix(attempt, vec![opening.clone()])?, pair);
+    assert_eq!(leaf.fix(attempt, vec![opening])?, pair);
     trace.push(step("fix and exact replay", "fixed", "ok"));
     let root = RootPackage::finalize(
         fixture.prepackage.clone(),
@@ -174,11 +174,16 @@ pub fn lifecycle() -> AnyResult<VectorCase> {
         )],
     )?;
     let signing = SigningContext::new(&root)?;
-    let response = leaf.respond(fixture.session, &root.to_bytes()?)?;
+    let response = leaf.respond(attempt, &root.to_bytes()?)?;
     Signature::new(signing.nonce(), response.scalar()).verify(root.key(), root.message())?;
     trace.push(step("respond", "closed", "ok"));
-    let tombstoned = error_code(&leaf.commit(fixture.session, &fixture.reservation, &mut rng))?;
-    trace.push(step("post-close call", "closed", tombstoned));
+    let closed = error_code(&leaf.commit(attempt, &fixture.reservation, &mut rng))?;
+    trace.push(step("post-close call", "closed", closed));
+    let retry = leaf.reserve(fixture.session, 0, &fixture.reservation, &fixture.outer)?;
+    assert_ne!(retry, attempt);
+    trace.push(step("retry same ceremony", "reserved", "ok"));
+    leaf.close(retry)?;
+    trace.push(step("close retry", "closed", "ok"));
 
     let before_commit = close_case(&fixture, CloseCase::BeforeCommit)?;
     let after_commit = close_case(&fixture, CloseCase::AfterCommit)?;
@@ -192,9 +197,11 @@ pub fn lifecycle() -> AnyResult<VectorCase> {
             "case": "leaf-replay-and-close",
             "commitment": scalar_hex(commitment),
             "format": "coupery-ksnf-v1",
+            "leaf_attempt": attempt.sequence(),
             "nonce_pair": pair_json(&pair),
             "reservation": hex(fixture.reservation.as_slice()),
             "response": hex(response.to_bytes()),
+            "retry_attempt": retry.sequence(),
             "terminal_cases": [before_commit, after_commit, timeout, sibling_abort, altered],
             "test_only_secret": {
                 "commit_rng_seed": hex([7_u8; 32]),
@@ -216,17 +223,17 @@ enum CloseCase {
 
 fn close_case(fixture: &Fixture, case: CloseCase) -> KResult<serde_json::Value> {
     let mut leaf = fixture.leaf(1)?;
-    leaf.reserve(fixture.session, &fixture.reservation, &fixture.outer)?;
+    let attempt = leaf.reserve(fixture.session, 0, &fixture.reservation, &fixture.outer)?;
     let mut rng = ChaCha20Rng::from_seed([9; 32]);
     let (name, result) = match case {
-        CloseCase::BeforeCommit => ("abort before commit", leaf.close(fixture.session)),
+        CloseCase::BeforeCommit => ("abort before commit", leaf.close(attempt)),
         CloseCase::AfterCommit => {
-            leaf.commit(fixture.session, &fixture.reservation, &mut rng)?;
-            ("abort after commit", leaf.close(fixture.session))
+            leaf.commit(attempt, &fixture.reservation, &mut rng)?;
+            ("abort after commit", leaf.close(attempt))
         }
         CloseCase::Timeout => (
             "timeout",
-            if leaf.close_expired(101) == Some(fixture.session) {
+            if leaf.close_expired(101) == Some(attempt) {
                 Ok(())
             } else {
                 Err(Error::WrongStage)
@@ -235,19 +242,19 @@ fn close_case(fixture: &Fixture, case: CloseCase) -> KResult<serde_json::Value> 
         CloseCase::SiblingAbort => (
             "authenticated sibling abort",
             leaf.receive_abort(&AuthenticatedAbort::new(
-                fixture.device(2),
-                fixture.device(1),
+                LeafAttempt::new(fixture.device(2), 0),
+                attempt,
                 fixture.session,
                 &fixture.reservation,
             )),
         ),
         CloseCase::AlteredReplay => {
-            leaf.commit(fixture.session, &fixture.reservation, &mut rng)?;
+            leaf.commit(attempt, &fixture.reservation, &mut rng)?;
             let mut altered = fixture.reservation.to_vec();
             altered[0] ^= 1;
             (
                 "altered same-session replay",
-                leaf.commit(fixture.session, &altered, &mut rng).map(|_| ()),
+                leaf.commit(attempt, &altered, &mut rng).map(|_| ()),
             )
         }
     };
@@ -256,9 +263,10 @@ fn close_case(fixture: &Fixture, case: CloseCase) -> KResult<serde_json::Value> 
         Err(error) => error.code(),
     };
     Ok(json!({
+        "attempt": attempt.sequence(),
         "case": name,
+        "closed": leaf.is_closed(attempt),
         "result": result,
-        "tombstoned": leaf.is_tombstoned(fixture.session)
     }))
 }
 
@@ -323,7 +331,7 @@ fn make_fixture(count: u8, marker: u8) -> AnyResult<Fixture> {
     )?;
     let genesis = at(
         "genesis",
-        ValidatedPublicGenesis::from_parts(
+        ValidatedPublicGenesis::validate(
             vault,
             PublicPolynomial::new(vec![Element::from_scalar(Scalar::from(101_u64))])?,
             vec![public_person],
@@ -384,7 +392,8 @@ fn make_fixture(count: u8, marker: u8) -> AnyResult<Fixture> {
 
 fn commitments(
     fixture: &Fixture,
-    receiver: DeviceId,
+    attempts: [LeafAttempt; 3],
+    receiver: LeafAttempt,
     first: Scalar,
     second: Scalar,
     third: Scalar,
@@ -394,7 +403,7 @@ fn commitments(
         .enumerate()
         .map(|(index, commitment)| {
             AuthenticatedCommitment::new(
-                fixture.device(index + 1),
+                attempts[index],
                 receiver,
                 fixture.session,
                 &fixture.reservation,
@@ -406,7 +415,8 @@ fn commitments(
 
 fn openings(
     fixture: &Fixture,
-    receiver: DeviceId,
+    attempts: [LeafAttempt; 3],
+    receiver: LeafAttempt,
     first: &NoncePair,
     second: &NoncePair,
     third: &NoncePair,
@@ -416,7 +426,7 @@ fn openings(
         .enumerate()
         .map(|(index, nonce)| {
             AuthenticatedOpening::new(
-                fixture.device(index + 1),
+                attempts[index],
                 receiver,
                 fixture.session,
                 &fixture.reservation,
